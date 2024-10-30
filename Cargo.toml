@@ -1,0 +1,28 @@
+[package]
+name = "integration"
+version = "0.1.0"
+authors = ["Héctor Ramón Jiménez <hector0193@gmail.com>"]
+edition = "2021"
+publish = false
+
+[dependencies]
+iced = { git = "https://github.com/iced-rs/iced" }
+iced_wgpu = { git = "https://github.com/iced-rs/iced" }
+iced_runtime = { git = "https://github.com/iced-rs/iced" }
+iced_core = { git = "https://github.com/iced-rs/iced" }
+iced_widget = { git = "https://github.com/iced-rs/iced" }
+#iced = "0"
+#iced_winit = "0"
+#iced_widget = "0"
+#iced_wgpu = "0"
+#wgpu = "22.1.0"
+console_error_panic_hook = "0"
+console_log = "1.0"
+wasm-bindgen = "0"
+web-sys = { version = "0.3", features = ["Element", "HtmlCanvasElement", "Window", "Document"] }
+sdl2 = { version = "0", features = ["raw-window-handle"] }
+pollster = "0"
+env_logger = "0"
+#wgpu = { version = "0.20", features = ["spirv"] }
+raw-window-handle = "0.6.0"
+#cow = "0"
