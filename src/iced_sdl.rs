@@ -93,6 +93,18 @@ pub fn window_event(
         } => {
             Some(iced_core::Event::Mouse(iced_core::mouse::Event::CursorLeft))
         }
+        Event::Window {
+            win_event: WindowEvent::FocusGained,
+            ..
+        } => {
+            Some(iced_core::Event::Window(iced_core::window::Event::Focused))
+        }
+        Event::Window {
+            win_event: WindowEvent::FocusLost,
+            ..
+        } => {
+            Some(iced_core::Event::Window(iced_core::window::Event::Unfocused))
+        }
         Event::MouseMotion {
             x,
             y,
