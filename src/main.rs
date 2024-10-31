@@ -1,5 +1,6 @@
 mod controls;
 mod scene;
+mod iced_sdl;
 
 use controls::Controls;
 use scene::Scene;
@@ -168,7 +169,7 @@ pub fn main() -> Result<(), String> {
             }
 
             // Map window event to iced event
-            if let Some(event) = sdl_to_iced_window_event(
+            if let Some(event) = iced_sdl::window_event(
                 &event,
                 1.0, //window.scale_factor(),
                 sdl_context.keyboard().mod_state(),
@@ -590,74 +591,3 @@ pub fn main() -> Result<(), String> {
     event_loop.run_app(&mut runner)
 }
 */
-
-pub fn sdl_to_iced_mouse_button(
-    mouse_btn: &sdl2::mouse::MouseButton,
-) -> iced::mouse::Button {
-    match mouse_btn {
-        sdl2::mouse::MouseButton::Left => iced::mouse::Button::Left,
-        sdl2::mouse::MouseButton::Right => iced::mouse::Button::Right,
-        sdl2::mouse::MouseButton::Middle => iced::mouse::Button::Middle,
-        sdl2::mouse::MouseButton::X1 => iced::mouse::Button::Back,
-        sdl2::mouse::MouseButton::X2 => iced::mouse::Button::Forward,
-        sdl2::mouse::MouseButton::Unknown => iced::mouse::Button::Other(0),
-    }
-}
-
-pub fn sdl_to_iced_window_event(
-    event: &Event,
-    _scale_factor: f64,
-    _modifiers: sdl2::keyboard::Mod,
-) -> Option<iced_core::Event> {
-    match event {
-        Event::Window {
-            //window_id,
-            win_event: WindowEvent::SizeChanged(width, height),
-            ..
-        } => {
-            Some(iced_core::Event::Window(iced_core::window::Event::Resized(Size {
-                width: *width as f32,
-                height: *height as f32,
-            })))
-        }
-        Event::Window {
-            win_event: WindowEvent::Enter,
-            ..
-        } => {
-            Some(iced_core::Event::Mouse(iced_core::mouse::Event::CursorEntered))
-        }
-        Event::Window {
-            win_event: WindowEvent::Leave,
-            ..
-        } => {
-            Some(iced_core::Event::Mouse(iced_core::mouse::Event::CursorLeft))
-        }
-        Event::MouseMotion {
-            x,
-            y,
-            ..
-        } => {
-            Some(iced_core::Event::Mouse(iced_core::mouse::Event::CursorMoved {
-                position: iced_core::Point::new(*x as f32, *y as f32),
-            }))
-        }
-        Event::MouseButtonDown {
-            mouse_btn,
-            ..
-        } => {
-            let btn = sdl_to_iced_mouse_button( mouse_btn );
-            Some(iced_core::Event::Mouse(iced_core::mouse::Event::ButtonPressed(btn)))
-        }
-        Event::MouseButtonUp {
-            mouse_btn,
-            ..
-        } => {
-            let btn = sdl_to_iced_mouse_button( mouse_btn );
-            Some(iced_core::Event::Mouse(iced_core::mouse::Event::ButtonReleased(btn)))
-        }
-        Event::Quit { .. } => {
-            Some(iced_core::Event::Window(iced_core::window::Event::CloseRequested))
-        }
-        _ => None,
-    }
-}
