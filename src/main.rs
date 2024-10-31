@@ -5,37 +5,14 @@ mod iced_sdl;
 use controls::Controls;
 use scene::Scene;
 
-/*
-use iced_winit::conversion;
-use iced_winit::core::{mouse,renderer};
-use iced_winit::core::{Color, Font, Pixels, Size, Theme};
-use iced_winit::{winit, futures};
-use iced_winit::runtime::{program,Debug};
-use iced_winit::Clipboard;
-*/
 use iced::{Font, Pixels, Size};
 use iced_runtime::{program,Debug};
 use iced_wgpu::graphics::Viewport;
 use iced_wgpu::{wgpu, Engine, Renderer};
 
-//use std::borrow::Cow;
-//use std::collections::HashMap;
-//use wgpu::SurfaceError;
-
 use sdl2::event::{Event, WindowEvent};
 use sdl2::keyboard::Keycode;
 
-/*
-use winit::{
-    //event::WindowEvent,
-    event_loop::{ControlFlow, EventLoop},
-    keyboard::ModifiersState,
-};
-*/
-
-//use std::sync::Arc;
-
-//pub fn main() -> Result<(), winit::error::EventLoopError> {
 pub fn main() -> Result<(), String> {
     // Show logs from wgpu
     env_logger::init();
@@ -220,26 +197,6 @@ pub fn main() -> Result<(), String> {
         });
 
         {
-            /*
-            let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &view,
-                    resolve_target: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color::GREEN),
-                        store: wgpu::StoreOp::Store,
-                    },
-                })],
-                depth_stencil_attachment: None,
-                label: None,
-                timestamp_writes: None,
-                occlusion_query_set: None,
-            });
-            rpass.set_pipeline(&render_pipeline);
-            rpass.set_bind_group(0, &bind_group, &[]);
-            rpass.draw(0..3, 0..1);
-            */
-
             let program = state.program();
 
             // We clear the frame
@@ -254,7 +211,6 @@ pub fn main() -> Result<(), String> {
             scene.draw(&mut render_pass);
         }
         renderer.present( &mut engine, &device, &queue, &mut encoder, None, frame.texture.format(), &view, &viewport, &debug.overlay(), );
-        //queue.submit([encoder.finish()]);
         engine.submit(&queue, encoder);
         frame.present();
     }
