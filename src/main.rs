@@ -108,7 +108,6 @@ pub fn main() -> Result<(), String> {
     let mut event_pump = sdl_context.event_pump()?;
     'running: loop {
         for event in event_pump.poll_iter() {
-
             match &event {
                 Event::Window {
                     window_id,
