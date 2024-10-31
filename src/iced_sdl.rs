@@ -1,8 +1,6 @@
 use sdl2::event::{Event, WindowEvent};
 
-pub fn mouse_button(
-    mouse_btn: &sdl2::mouse::MouseButton,
-) -> iced::mouse::Button {
+pub fn mouse_button(mouse_btn: &sdl2::mouse::MouseButton) -> iced::mouse::Button {
     match mouse_btn {
         sdl2::mouse::MouseButton::Left => iced::mouse::Button::Left,
         sdl2::mouse::MouseButton::Right => iced::mouse::Button::Right,
@@ -13,13 +11,11 @@ pub fn mouse_button(
     }
 }
 
-pub fn key(
-    keycode: &sdl2::keyboard::Keycode,
-) -> iced::keyboard::key::Key {
-    use sdl2::keyboard::Keycode;
+pub fn key(keycode: &sdl2::keyboard::Keycode) -> iced::keyboard::key::Key {
     use iced::keyboard::key::Key::{Character, Named};
     use iced::keyboard::key::Named as NamedKey;
     use iced_core::SmolStr;
+    use sdl2::keyboard::Keycode;
 
     match keycode {
         &Keycode::A => Character(SmolStr::new("a")),
@@ -32,11 +28,9 @@ pub fn key(
     }
 }
 
-pub fn physical_key(
-    scancode: &sdl2::keyboard::Scancode,
-) -> iced::keyboard::key::Physical {
+pub fn physical_key(scancode: &sdl2::keyboard::Scancode) -> iced::keyboard::key::Physical {
+    use iced_core::keyboard::key::{Code, NativeCode, Physical};
     use sdl2::keyboard::Scancode;
-    use iced_core::keyboard::key::{Physical, Code, NativeCode};
 
     match scancode {
         &Scancode::A => Physical::Code(Code::KeyA),
@@ -44,23 +38,21 @@ pub fn physical_key(
     }
 }
 
-pub fn modifier(
-    keymod: &sdl2::keyboard::Mod,
-) -> iced::keyboard::Modifiers {
-    use sdl2::keyboard::Mod;
+pub fn modifier(keymod: &sdl2::keyboard::Mod) -> iced::keyboard::Modifiers {
     use iced::keyboard::Modifiers;
+    use sdl2::keyboard::Mod;
     let mut modifiers = iced_core::keyboard::Modifiers::empty();
-    if keymod.contains( Mod::LSHIFTMOD | Mod::RSHIFTMOD ) {
-        modifiers.insert( Modifiers::SHIFT );
+    if keymod.contains(Mod::LSHIFTMOD | Mod::RSHIFTMOD) {
+        modifiers.insert(Modifiers::SHIFT);
     }
-    if keymod.contains( Mod::LCTRLMOD | Mod::RCTRLMOD ) {
-        modifiers.insert( Modifiers::CTRL );
+    if keymod.contains(Mod::LCTRLMOD | Mod::RCTRLMOD) {
+        modifiers.insert(Modifiers::CTRL);
     }
-    if keymod.contains( Mod::LALTMOD | Mod::RALTMOD ) {
-        modifiers.insert( Modifiers::ALT );
+    if keymod.contains(Mod::LALTMOD | Mod::RALTMOD) {
+        modifiers.insert(Modifiers::ALT);
     }
-    if keymod.contains( Mod::LGUIMOD | Mod::RGUIMOD ) {
-        modifiers.insert( Modifiers::LOGO );
+    if keymod.contains(Mod::LGUIMOD | Mod::RGUIMOD) {
+        modifiers.insert(Modifiers::LOGO);
     }
     modifiers
 }
@@ -75,74 +67,65 @@ pub fn window_event(
             //window_id,
             win_event: WindowEvent::SizeChanged(width, height),
             ..
-        } => {
-            Some(iced_core::Event::Window(iced_core::window::Event::Resized(iced::Size {
+        } => Some(iced_core::Event::Window(iced_core::window::Event::Resized(
+            iced::Size {
                 width: *width as f32,
                 height: *height as f32,
-            })))
-        }
+            },
+        ))),
         Event::Window {
             win_event: WindowEvent::Enter,
             ..
-        } => {
-            Some(iced_core::Event::Mouse(iced_core::mouse::Event::CursorEntered))
-        }
+        } => Some(iced_core::Event::Mouse(
+            iced_core::mouse::Event::CursorEntered,
+        )),
         Event::Window {
             win_event: WindowEvent::Leave,
             ..
-        } => {
-            Some(iced_core::Event::Mouse(iced_core::mouse::Event::CursorLeft))
-        }
+        } => Some(iced_core::Event::Mouse(iced_core::mouse::Event::CursorLeft)),
         Event::Window {
             win_event: WindowEvent::FocusGained,
             ..
-        } => {
-            Some(iced_core::Event::Window(iced_core::window::Event::Focused))
-        }
+        } => Some(iced_core::Event::Window(iced_core::window::Event::Focused)),
         Event::Window {
             win_event: WindowEvent::FocusLost,
             ..
-        } => {
-            Some(iced_core::Event::Window(iced_core::window::Event::Unfocused))
-        }
-        Event::MouseMotion {
-            x,
-            y,
-            ..
-        } => {
+        } => Some(iced_core::Event::Window(
+            iced_core::window::Event::Unfocused,
+        )),
+        Event::MouseMotion { x, y, .. } => {
             let fx = (*x as f64) / scale_factor;
             let fy = (*y as f64) / scale_factor;
-            Some(iced_core::Event::Mouse(iced_core::mouse::Event::CursorMoved {
-                position: iced_core::Point::new(fx as f32, fy as f32),
-            }))
+            Some(iced_core::Event::Mouse(
+                iced_core::mouse::Event::CursorMoved {
+                    position: iced_core::Point::new(fx as f32, fy as f32),
+                },
+            ))
         }
-        Event::MouseButtonDown {
-            mouse_btn,
-            ..
-        } => {
-            let btn = mouse_button( mouse_btn );
-            Some(iced_core::Event::Mouse(iced_core::mouse::Event::ButtonPressed(btn)))
+        Event::MouseButtonDown { mouse_btn, .. } => {
+            let btn = mouse_button(mouse_btn);
+            Some(iced_core::Event::Mouse(
+                iced_core::mouse::Event::ButtonPressed(btn),
+            ))
         }
-        Event::MouseButtonUp {
-            mouse_btn,
-            ..
-        } => {
-            let btn = mouse_button( mouse_btn );
-            Some(iced_core::Event::Mouse(iced_core::mouse::Event::ButtonReleased(btn)))
+        Event::MouseButtonUp { mouse_btn, .. } => {
+            let btn = mouse_button(mouse_btn);
+            Some(iced_core::Event::Mouse(
+                iced_core::mouse::Event::ButtonReleased(btn),
+            ))
         }
-        Event::TextInput {
-            text,
-            ..
-        } => {
-            Some(iced_core::Event::Keyboard(iced_core::keyboard::Event::KeyPressed{
+        Event::TextInput { text, .. } => Some(iced_core::Event::Keyboard(
+            iced_core::keyboard::Event::KeyPressed {
                 key: iced::keyboard::Key::Unidentified,
                 modified_key: iced::keyboard::Key::Unidentified,
-                physical_key: iced_core::keyboard::key::Physical::Unidentified(iced_core::keyboard::key::NativeCode::Unidentified),
+                physical_key: iced_core::keyboard::key::Physical::Unidentified(
+                    iced_core::keyboard::key::NativeCode::Unidentified,
+                ),
                 location: iced_core::keyboard::Location::Standard,
                 modifiers: iced_core::keyboard::Modifiers::empty(),
                 text: Some(iced_core::SmolStr::new(text)),
-            }))
-        }
+            },
+        )),
         Event::KeyDown {
             keycode,
             scancode,
@@ -150,20 +133,24 @@ pub fn window_event(
             ..
         } => {
             let k = match keycode {
-                    Some(c) => key(c),
-                    None => iced::keyboard::Key::Unidentified,
-                };
-            Some(iced_core::Event::Keyboard(iced_core::keyboard::Event::KeyPressed{
-                key: k.clone(),
-                modified_key: k,
-                physical_key: match scancode {
-                    Some(c) => physical_key(c),
-                    None => iced_core::keyboard::key::Physical::Unidentified(iced_core::keyboard::key::NativeCode::Unidentified),
+                Some(c) => key(c),
+                None => iced::keyboard::Key::Unidentified,
+            };
+            Some(iced_core::Event::Keyboard(
+                iced_core::keyboard::Event::KeyPressed {
+                    key: k.clone(),
+                    modified_key: k,
+                    physical_key: match scancode {
+                        Some(c) => physical_key(c),
+                        None => iced_core::keyboard::key::Physical::Unidentified(
+                            iced_core::keyboard::key::NativeCode::Unidentified,
+                        ),
+                    },
+                    location: iced_core::keyboard::Location::Standard,
+                    modifiers: modifier(keymod),
+                    text: None,
                 },
-                location: iced_core::keyboard::Location::Standard,
-                modifiers: modifier(keymod) ,
-                text: None,
-            }))
+            ))
         }
         Event::KeyUp {
             keycode,
@@ -172,23 +159,27 @@ pub fn window_event(
             ..
         } => {
             let k = match keycode {
-                    Some(c) => key(c),
-                    None => iced::keyboard::Key::Unidentified,
-                };
-            Some(iced_core::Event::Keyboard(iced_core::keyboard::Event::KeyReleased{
-                key: k.clone(),
-                modified_key: k,
-                physical_key: match scancode {
-                    Some(c) => physical_key(c),
-                    None => iced_core::keyboard::key::Physical::Unidentified(iced_core::keyboard::key::NativeCode::Unidentified),
+                Some(c) => key(c),
+                None => iced::keyboard::Key::Unidentified,
+            };
+            Some(iced_core::Event::Keyboard(
+                iced_core::keyboard::Event::KeyReleased {
+                    key: k.clone(),
+                    modified_key: k,
+                    physical_key: match scancode {
+                        Some(c) => physical_key(c),
+                        None => iced_core::keyboard::key::Physical::Unidentified(
+                            iced_core::keyboard::key::NativeCode::Unidentified,
+                        ),
+                    },
+                    location: iced_core::keyboard::Location::Standard,
+                    modifiers: modifier(keymod),
                 },
-                location: iced_core::keyboard::Location::Standard,
-                modifiers: modifier(keymod) ,
-            }))
+            ))
         }
-        Event::Quit { .. } => {
-            Some(iced_core::Event::Window(iced_core::window::Event::CloseRequested))
-        }
+        Event::Quit { .. } => Some(iced_core::Event::Window(
+            iced_core::window::Event::CloseRequested,
+        )),
         _ => None,
     }
 }

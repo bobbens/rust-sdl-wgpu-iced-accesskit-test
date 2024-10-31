@@ -1,19 +1,43 @@
 //mod controls;
-mod scene;
 mod iced_sdl;
 mod menu_main;
+mod scene;
 
 //use controls::Controls;
-use scene::Scene;
 use menu_main::MenuMain;
+use scene::Scene;
 
 use iced::{Font, Pixels, Size};
-use iced_runtime::{program,Debug};
+use iced_runtime::{program, Debug};
 use iced_wgpu::graphics::Viewport;
 use iced_wgpu::{wgpu, Engine, Renderer};
 
 use sdl2::event::{Event, WindowEvent};
 use sdl2::keyboard::Keycode;
+
+const PALETTE: iced::theme::Palette = iced::theme::Palette {
+    background: iced_core::Color::from_rgb(
+        0x20 as f32 / 255.0,
+        0x02 as f32 / 255.0,
+        0x05 as f32 / 255.0,
+    ),
+    text: iced_core::Color::from_rgb(0.90, 0.90, 0.90),
+    primary: iced_core::Color::from_rgb(
+        0x5E as f32 / 255.0,
+        0x7C as f32 / 255.0,
+        0xE2 as f32 / 255.0,
+    ),
+    success: iced_core::Color::from_rgb(
+        0x12 as f32 / 255.0,
+        0x66 as f32 / 255.0,
+        0x4F as f32 / 255.0,
+    ),
+    danger: iced_core::Color::from_rgb(
+        0xC3 as f32 / 255.0,
+        0x42 as f32 / 255.0,
+        0x3F as f32 / 255.0,
+    ),
+};
 
 pub fn main() -> Result<(), String> {
     // Show logs from wgpu
@@ -25,9 +49,9 @@ pub fn main() -> Result<(), String> {
         .window("Raw Window Handle Example", 800, 600)
         .position_centered()
         .resizable()
-        .metal_view()
+        //.metal_view()
         .allow_highdpi()
-        .opengl()
+        //.opengl()
         .build()
         .map_err(|e| e.to_string())?;
     let (width, height) = window.size();
@@ -39,7 +63,7 @@ pub fn main() -> Result<(), String> {
     });
     let surface = unsafe {
         match instance
-            .create_surface_unsafe( wgpu::SurfaceTargetUnsafe::from_window(&window).unwrap() )
+            .create_surface_unsafe(wgpu::SurfaceTargetUnsafe::from_window(&window).unwrap())
         {
             Ok(s) => s,
             Err(e) => return Err(e.to_string()),
@@ -69,7 +93,6 @@ pub fn main() -> Result<(), String> {
     };
 
     let format = wgpu::TextureFormat::Bgra8UnormSrgb;
-
     let mut config = wgpu::SurfaceConfiguration {
         usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
         format: format,
@@ -82,29 +105,18 @@ pub fn main() -> Result<(), String> {
     };
     surface.configure(&device, &config);
 
-    let mut engine =
-        Engine::new(&adapter, &device, &queue, format, None);
-    let mut renderer = Renderer::new(
-        &device,
-        &engine,
-        Font::default(),
-        Pixels::from(16),
-    );
-    let scale_factor = 1.0;
-    let viewport = Viewport::with_physical_size(
-        Size::new(width, height),
-        scale_factor,
-    );
+    let mut engine = Engine::new(&adapter, &device, &queue, format, None);
+    let mut renderer = Renderer::new(&device, &engine, Font::default(), Pixels::from(16));
+    let scale_factor = 1.0; // TODO hook with SDL or something
+    let viewport = Viewport::with_physical_size(Size::new(width, height), scale_factor);
     let mut debug = Debug::new();
     let controls = MenuMain::new();
     let scene = Scene::new(&device, format);
-    let mut state = program::State::new(
-        controls,
-        viewport.logical_size(),
-        &mut renderer,
-        &mut debug,
-    );
-    state.queue_event( iced::Event::Window(iced::window::Event::RedrawRequested(std::time::Instant::now())) );
+    let mut state =
+        program::State::new(controls, viewport.logical_size(), &mut renderer, &mut debug);
+    state.queue_event(iced::Event::Window(iced::window::Event::RedrawRequested(
+        std::time::Instant::now(),
+    )));
 
     let mut cursor_position = iced_core::mouse::Cursor::Unavailable;
     let mut event_pump = sdl_context.event_pump()?;
@@ -120,20 +132,12 @@ pub fn main() -> Result<(), String> {
                     config.height = *height as u32;
                     surface.configure(&device, &config);
                 }
-                Event::MouseMotion {
-                    x,
-                    y,
-                    ..
-                } | Event::MouseButtonDown {
-                    x,
-                    y,
-                    ..
-                } | Event::MouseButtonUp {
-                    x,
-                    y,
-                    ..
-                } => {
-                    cursor_position = iced_core::mouse::Cursor::Available( iced_core::Point::new(*x as f32, *y as f32 ));
+                Event::MouseMotion { x, y, .. }
+                | Event::MouseButtonDown { x, y, .. }
+                | Event::MouseButtonUp { x, y, .. } => {
+                    cursor_position = iced_core::mouse::Cursor::Available(iced_core::Point::new(
+                        *x as f32, *y as f32,
+                    ));
                 }
                 Event::Quit { .. }
                 | Event::KeyDown {
@@ -148,14 +152,14 @@ pub fn main() -> Result<(), String> {
             }
 
             // Map window event to iced event
-            if let Some(event) = iced_sdl::window_event(
-                &event,
-                scale_factor,
-                sdl_context.keyboard().mod_state(),
-            ) {
+            if let Some(event) =
+                iced_sdl::window_event(&event, scale_factor, sdl_context.keyboard().mod_state())
+            {
                 state.queue_event(event);
             }
         }
+
+        let theme = iced::theme::Theme::custom(String::from("Naev"), PALETTE);
 
         // If there are events pending
         if !state.is_queue_empty() {
@@ -164,10 +168,9 @@ pub fn main() -> Result<(), String> {
                 viewport.logical_size(),
                 cursor_position,
                 &mut renderer,
-                &iced_core::Theme::Dark,
-                &iced_core::renderer::Style {
-                    text_color: iced_core::Color::WHITE,
-                },
+                //&iced_core::Theme::Dark,
+                &theme,
+                &iced_core::renderer::Style::default(),
                 &mut iced_core::clipboard::Null,
                 &mut debug,
             );
@@ -177,7 +180,7 @@ pub fn main() -> Result<(), String> {
             match program.state {
                 menu_main::Message::ExitGame => {
                     break 'running;
-                },
+                }
                 _ => (),
             };
 
@@ -218,7 +221,17 @@ pub fn main() -> Result<(), String> {
             // Draw the scene
             scene.draw(&mut render_pass);
         }
-        renderer.present( &mut engine, &device, &queue, &mut encoder, None, frame.texture.format(), &view, &viewport, &debug.overlay(), );
+        renderer.present(
+            &mut engine,
+            &device,
+            &queue,
+            &mut encoder,
+            None,
+            frame.texture.format(),
+            &view,
+            &viewport,
+            &debug.overlay(),
+        );
         engine.submit(&queue, encoder);
         frame.present();
     }

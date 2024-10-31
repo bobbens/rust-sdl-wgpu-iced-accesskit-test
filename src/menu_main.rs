@@ -1,8 +1,8 @@
-use iced::{Fill, Center};
-use iced_wgpu::Renderer;
-use iced_widget::{column, button, container};
-use iced_core::{Theme, Element};
+use iced::{Center, Fill};
+use iced_core::{Element, Theme};
 use iced_runtime::{Program, Task};
+use iced_wgpu::Renderer;
+use iced_widget::{button, column, container};
 
 #[derive(Debug)]
 pub struct MenuMain {
@@ -51,13 +51,13 @@ impl Program for MenuMain {
                 ]
                 .spacing(10)
                 .padding(20)
-                .align_x(Center)
+                .align_x(Center),
             )
-            .style( container::bordered_box )
+            .style(container::bordered_box)
             .align_x(Center)
-            .width(150)
+            .width(150),
         )
-        .style( container::transparent )
+        .style(container::transparent)
         .center(Fill)
         .into()
     }
