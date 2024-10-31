@@ -163,6 +163,27 @@ pub fn window_event(
                 text: None,
             }))
         }
+        Event::KeyUp {
+            keycode,
+            scancode,
+            keymod,
+            ..
+        } => {
+            let k = match keycode {
+                    Some(c) => key(c),
+                    None => iced::keyboard::Key::Unidentified,
+                };
+            Some(iced_core::Event::Keyboard(iced_core::keyboard::Event::KeyReleased{
+                key: k.clone(),
+                modified_key: k,
+                physical_key: match scancode {
+                    Some(c) => physical_key(c),
+                    None => iced_core::keyboard::key::Physical::Unidentified(iced_core::keyboard::key::NativeCode::Unidentified),
+                },
+                location: iced_core::keyboard::Location::Standard,
+                modifiers: modifier(keymod) ,
+            }))
+        }
         Event::Quit { .. } => {
             Some(iced_core::Event::Window(iced_core::window::Event::CloseRequested))
         }
