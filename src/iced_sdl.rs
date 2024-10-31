@@ -67,7 +67,7 @@ pub fn modifier(
 
 pub fn window_event(
     event: &Event,
-    _scale_factor: f64,
+    scale_factor: f64,
     _modifiers: sdl2::keyboard::Mod,
 ) -> Option<iced_core::Event> {
     match event {
@@ -110,8 +110,10 @@ pub fn window_event(
             y,
             ..
         } => {
+            let fx = (*x as f64) / scale_factor;
+            let fy = (*y as f64) / scale_factor;
             Some(iced_core::Event::Mouse(iced_core::mouse::Event::CursorMoved {
-                position: iced_core::Point::new(*x as f32, *y as f32),
+                position: iced_core::Point::new(fx as f32, fy as f32),
             }))
         }
         Event::MouseButtonDown {

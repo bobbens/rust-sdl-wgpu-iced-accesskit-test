@@ -1,9 +1,11 @@
-mod controls;
+//mod controls;
 mod scene;
 mod iced_sdl;
+mod menu_main;
 
-use controls::Controls;
+//use controls::Controls;
 use scene::Scene;
+use menu_main::MenuMain;
 
 use iced::{Font, Pixels, Size};
 use iced_runtime::{program,Debug};
@@ -88,13 +90,13 @@ pub fn main() -> Result<(), String> {
         Font::default(),
         Pixels::from(16),
     );
+    let scale_factor = 1.0;
     let viewport = Viewport::with_physical_size(
         Size::new(width, height),
-        1.0,
-        //window.scale_factor(),
+        scale_factor,
     );
     let mut debug = Debug::new();
-    let controls = Controls::new();
+    let controls = MenuMain::new();
     let scene = Scene::new(&device, format);
     let mut state = program::State::new(
         controls,
@@ -148,7 +150,7 @@ pub fn main() -> Result<(), String> {
             // Map window event to iced event
             if let Some(event) = iced_sdl::window_event(
                 &event,
-                1.0, //window.scale_factor(),
+                scale_factor,
                 sdl_context.keyboard().mod_state(),
             ) {
                 state.queue_event(event);
@@ -169,6 +171,15 @@ pub fn main() -> Result<(), String> {
                 &mut iced_core::clipboard::Null,
                 &mut debug,
             );
+
+            // Handle events from the app
+            let program = state.program();
+            match program.state {
+                menu_main::Message::ExitGame => {
+                    break 'running;
+                },
+                _ => (),
+            };
 
             // and request a redraw
             //window.request_redraw();
@@ -196,14 +207,12 @@ pub fn main() -> Result<(), String> {
         });
 
         {
-            let program = state.program();
-
             // We clear the frame
             let mut render_pass = Scene::clear(
                 &view,
                 &mut encoder,
-                program.background_color(),
-                //iced_core::Color::TRANSPARENT,
+                //program.background_color(),
+                iced_core::Color::TRANSPARENT,
             );
 
             // Draw the scene
