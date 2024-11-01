@@ -12,7 +12,7 @@ pub struct MenuMain {
 #[derive(Debug, Clone)]
 pub enum Message {
     None,
-    LoadGame,
+    //LoadGame,
     NewGame,
     Editors,
     Options,
@@ -42,7 +42,7 @@ impl Program for MenuMain {
         container(
             container(
                 column![
-                    button("Load Game").on_press(Message::LoadGame),
+                    button("Load Game"),
                     button("New Game").on_press(Message::NewGame),
                     button("Editors").on_press(Message::Editors),
                     button("Options").on_press(Message::Options),
@@ -53,7 +53,7 @@ impl Program for MenuMain {
                 .padding(20)
                 .align_x(Center),
             )
-            .style(container::bordered_box)
+            .style(crate::toolkit::window)
             .align_x(Center)
             .width(150),
         )

@@ -2,6 +2,7 @@
 mod iced_sdl;
 mod menu_main;
 mod scene;
+mod toolkit;
 
 //use controls::Controls;
 use menu_main::MenuMain;
@@ -14,30 +15,6 @@ use iced_wgpu::{wgpu, Engine, Renderer};
 
 use sdl2::event::{Event, WindowEvent};
 use sdl2::keyboard::Keycode;
-
-const PALETTE: iced::theme::Palette = iced::theme::Palette {
-    background: iced_core::Color::from_rgb(
-        0x20 as f32 / 255.0,
-        0x02 as f32 / 255.0,
-        0x05 as f32 / 255.0,
-    ),
-    text: iced_core::Color::from_rgb(0.90, 0.90, 0.90),
-    primary: iced_core::Color::from_rgb(
-        0x5E as f32 / 255.0,
-        0x7C as f32 / 255.0,
-        0xE2 as f32 / 255.0,
-    ),
-    success: iced_core::Color::from_rgb(
-        0x12 as f32 / 255.0,
-        0x66 as f32 / 255.0,
-        0x4F as f32 / 255.0,
-    ),
-    danger: iced_core::Color::from_rgb(
-        0xC3 as f32 / 255.0,
-        0x42 as f32 / 255.0,
-        0x3F as f32 / 255.0,
-    ),
-};
 
 pub fn main() -> Result<(), String> {
     // Show logs from wgpu
@@ -159,7 +136,7 @@ pub fn main() -> Result<(), String> {
             }
         }
 
-        let theme = iced::theme::Theme::custom(String::from("Naev"), PALETTE);
+        let theme = toolkit::theme();
 
         // If there are events pending
         if !state.is_queue_empty() {
