@@ -90,8 +90,14 @@ pub fn main() -> Result<(), String> {
     let mut debug = Debug::new();
     let controls = MenuMain::new();
     let scene = Scene::new(&device, format);
-    let mut state =
-        program::State::new(controls, viewport.logical_size(), &mut renderer, &mut debug);
+    // let mut state =
+    // program::State::new(controls, viewport.logical_size(), &mut renderer, &mut debug);
+    let mut state = program::State::new(
+        toolkit_lua::ToolkitLua::new(),
+        viewport.logical_size(),
+        &mut renderer,
+        &mut debug,
+    );
     state.queue_event(iced::Event::Window(iced::window::Event::RedrawRequested(
         std::time::Instant::now(),
     )));
@@ -155,12 +161,12 @@ pub fn main() -> Result<(), String> {
 
             // Handle events from the app
             let program = state.program();
-            match program.state {
-                menu_main::Message::ExitGame => {
-                    break 'running;
-                }
-                _ => (),
-            };
+            // match program.state {
+            //     menu_main::Message::ExitGame => {
+            //         break 'running;
+            //     }
+            //     _ => (),
+            // };
 
             // and request a redraw
             //window.request_redraw();
@@ -176,6 +182,12 @@ pub fn main() -> Result<(), String> {
                     wgpu::SurfaceError::OutOfMemory => "OutOfMemory",
                 };
                 println!("Failed to get current surface texture! Reason: {}", reason);
+                if let wgpu::SurfaceError::Outdated | wgpu::SurfaceError::Lost = err {
+                    let (w, h) = window.size();
+                    config.width = w;
+                    config.height = h;
+                    surface.configure(&device, &config);
+                }
                 continue 'running;
             }
         };
