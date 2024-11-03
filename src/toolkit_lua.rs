@@ -5,13 +5,22 @@ use iced_wgpu::Renderer;
 use iced_widget::{button, column, container};
 
 #[derive(Debug, Clone)]
-struct Message(mlua::Value);
+pub struct Message(mlua::Value);
 impl Message {
-    fn new(value: mlua::Value) -> Message {
-        Message(value)
+    fn new<V: Into<mlua::Value> + Send>(value: V) -> Message {
+        Message(value.into())
     }
 }
 impl mlua::UserData for Message {}
+
+// Wraper for Horizontal
+struct LuaHorizontal(iced::alignment::Horizontal);
+impl Into<iced::alignment::Horizontal> for LuaHorizontal {
+    fn into(self) -> iced::alignment::Horizontal {
+        self.0
+    }
+}
+impl mlua::UserData for LuaHorizontal {}
 
 struct LuaElement(iced::Element<'static, Message, Theme, Renderer>);
 impl Into<iced::Element<'static, Message, Theme, Renderer>> for LuaElement {
@@ -19,19 +28,25 @@ impl Into<iced::Element<'static, Message, Theme, Renderer>> for LuaElement {
         self.0
     }
 }
-impl mlua::UserData for LuaElement {}
+impl mlua::UserData for LuaElement {
+    fn add_methods<M: mlua::UserDataMethods<Self>>(methods: &mut M) {}
+}
+// TODO fix this
+unsafe impl Send for LuaElement {}
 
 struct LuaContainer(container::Container<'static, Message, Theme, Renderer>);
 impl LuaContainer {
-    fn new(content: impl Into<Element<'static, Message, Theme, Renderer>>) -> LuaContainer {
+    //fn new(content: impl Into<Element<'static, Message, Theme, Renderer>>) -> LuaContainer {
+    fn new<C: Into<Element<'static, Message, Theme, Renderer>> + Send>(content: C) -> LuaContainer {
         LuaContainer(container(content))
     }
 }
+unsafe impl Send for LuaContainer {}
 impl mlua::UserData for LuaContainer {
     fn add_methods<M: mlua::UserDataMethods<Self>>(methods: &mut M) {
-        // Constructor
-        methods.add_meta_function(mlua::MetaMethod::Call, |_, context: LuaElement| {
-            Ok(LuaContainer::new(context))
+        methods.add_method_mut("add", |_, this, value: LuaHorizontal| {
+            Ok(LuaContainer(this.0.align_x(value)))
+            //Ok(())
         });
     }
 }
@@ -48,7 +63,7 @@ macro_rules! impl_fromlua_for {
    }
  )*}
 }
-impl_fromlua_for!(LuaElement, LuaContainer, Message);
+impl_fromlua_for!(LuaElement, LuaContainer, LuaHorizontal, Message);
 
 #[derive(Debug)]
 pub struct ToolkitLua {
