@@ -4,21 +4,31 @@ use iced_runtime::{Program, Task};
 use iced_wgpu::Renderer;
 use iced_widget::{button, column, container};
 
-macro_rules! lua_wrapper {
+macro_rules! lua_wrapper_min {
     ($wrapper: ident, $wrapped: ty) => {
         struct $wrapper($wrapped);
         unsafe impl Send for $wrapper {}
+        impl From<$wrapper> for $wrapped {
+            fn from(value: $wrapper) -> Self {
+                value.0.into()
+            }
+        }
+    };
+}
+
+macro_rules! lua_wrapper {
+    ($wrapper: ident, $wrapped: ty) => {
+        lua_wrapper_min!($wrapper, $wrapped);
         impl mlua::FromLua for $wrapper {
             fn from_lua(value: mlua::Value, _lua: &mlua::Lua) -> mlua::Result<Self> {
                 match value {
                     mlua::Value::UserData(ud) => Ok(ud.take::<Self>()?),
-                    _ => unreachable!(),
+                    _ => Err(mlua::Error::FromLuaConversionError {
+                        from: value.type_name(),
+                        to: String::from("$wrapper"),
+                        message: None,
+                    }),
                 }
-            }
-        }
-        impl From<$wrapper> for $wrapped {
-            fn from(value: $wrapper) -> Self {
-                value.0.into()
             }
         }
     };
@@ -57,6 +67,28 @@ impl Message {
 impl mlua::UserData for Message {}
 impl_fromlua_for!(Message);
 
+// Wraper for Length
+lua_wrapper!(LuaLength, iced::Length);
+impl mlua::UserData for LuaLength {}
+
+// Wraper for Padding
+lua_wrapper_min!(LuaPadding, iced::Padding);
+impl mlua::UserData for LuaPadding {}
+impl mlua::FromLua for LuaPadding {
+    fn from_lua(value: mlua::Value, _lua: &mlua::Lua) -> mlua::Result<Self> {
+        match value {
+            mlua::Value::Integer(n) => Ok(LuaPadding(iced::Padding::new(n as f32))),
+            mlua::Value::Number(n) => Ok(LuaPadding(iced::Padding::new(n as f32))),
+            mlua::Value::UserData(ud) => Ok(ud.take::<Self>()?),
+            _ => Err(mlua::Error::FromLuaConversionError {
+                from: value.type_name(),
+                to: String::from("LuaPadding"),
+                message: None,
+            }),
+        }
+    }
+}
+
 // Wraper for Horizontal
 lua_wrapper!(LuaHorizontal, iced::alignment::Horizontal);
 impl mlua::UserData for LuaHorizontal {}
@@ -75,6 +107,18 @@ impl mlua::UserData for LuaButton {
     fn add_methods<M: mlua::UserDataMethods<Self>>(methods: &mut M) {
         methods.add_function_mut("on_press", |_lua, (this, val): (Self, mlua::Value)| {
             Ok(LuaButton(this.0.on_press(Message(val))))
+        });
+        methods.add_function_mut("width", |_lua, (this, val): (Self, LuaLength)| {
+            Ok(LuaButton(this.0.width(val)))
+        });
+        methods.add_function_mut("height", |_lua, (this, val): (Self, LuaLength)| {
+            Ok(LuaButton(this.0.height(val)))
+        });
+        methods.add_function_mut("padding", |_lua, (this, val): (Self, LuaPadding)| {
+            Ok(LuaButton(this.0.padding(val)))
+        });
+        methods.add_function_mut("clip", |_lua, (this, val): (Self, mlua::Value)| {
+            Ok(LuaButton(this.0.clip(val.as_boolean().unwrap_or(false))))
         });
     }
 }
@@ -112,7 +156,9 @@ impl ToolkitLua {
         .exec()?;
         lua.load(
             "function view()
-                return iced.button(\"wtf\"):on_press(\"Yo, wtf\")
+                return iced.button('wtf')
+                    :on_press('Yo, wtf')
+                    :padding(10)
             end",
         )
         .exec()?;
@@ -146,6 +192,39 @@ fn value_to_element(
 pub fn open_iced(lua: &mlua::Lua) -> mlua::Result<()> {
     let iced = lua.create_table()?;
     let globals = lua.globals();
+    // Lengths
+    iced.set(
+        "Fill",
+        lua.create_function(|_lua, ()| -> mlua::Result<LuaLength> {
+            Ok(LuaLength(iced::Length::Fill))
+        })?,
+    )?;
+    iced.set(
+        "FillPortion",
+        lua.create_function(|_lua, val: u16| -> mlua::Result<LuaLength> {
+            Ok(LuaLength(iced::Length::FillPortion(val)))
+        })?,
+    )?;
+    iced.set(
+        "Shrink",
+        lua.create_function(|_lua, ()| -> mlua::Result<LuaLength> {
+            Ok(LuaLength(iced::Length::Shrink))
+        })?,
+    )?;
+    iced.set(
+        "Fixed",
+        lua.create_function(|_lua, val: f32| -> mlua::Result<LuaLength> {
+            Ok(LuaLength(iced::Length::Fixed(val)))
+        })?,
+    )?;
+    // Padding
+    iced.set(
+        "padding",
+        lua.create_function(|_lua, val: f32| -> mlua::Result<LuaPadding> {
+            Ok(LuaPadding(iced::Padding::new(val)))
+        })?,
+    )?;
+    // Widgets
     iced.set(
         "container",
         lua.create_function(|_lua, val: mlua::Value| -> mlua::Result<LuaContainer> {
