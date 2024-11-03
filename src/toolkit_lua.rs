@@ -5,14 +5,13 @@ use iced_wgpu::Renderer;
 use iced_widget::{button, column, container};
 
 #[derive(Debug, Clone)]
-struct Message {
-    s: String,
-}
+struct Message(mlua::Value);
 impl Message {
-    fn new(s: String) -> Message {
-        Message { s: s }
+    fn new(value: mlua::Value) -> Message {
+        Message(value)
     }
 }
+impl mlua::UserData for Message {}
 
 struct LuaElement(iced::Element<'static, Message, Theme, Renderer>);
 impl Into<iced::Element<'static, Message, Theme, Renderer>> for LuaElement {
@@ -49,7 +48,7 @@ macro_rules! impl_fromlua_for {
    }
  )*}
 }
-impl_fromlua_for!(LuaElement, LuaContainer);
+impl_fromlua_for!(LuaElement, LuaContainer, Message);
 
 #[derive(Debug)]
 pub struct ToolkitLua {
@@ -63,7 +62,7 @@ impl ToolkitLua {
         let lua = mlua::Lua::new();
         let globals = lua.globals();
         ToolkitLua {
-            lua: lua,
+            lua,
             update: globals.get("update").unwrap(),
             view: globals.get("view").unwrap(),
         }
@@ -86,7 +85,7 @@ impl Program for ToolkitLua {
             container(
                 column![
                     button("Load Game"),
-                    button("New Game").on_press(Message::new("New Game")),
+                    button("New Game").on_press(Message::new(mlua::Value::Nil)),
                 ]
                 .spacing(10)
                 .padding(20)

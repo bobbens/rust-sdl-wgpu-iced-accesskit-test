@@ -73,7 +73,7 @@ pub fn main() -> Result<(), String> {
     let format = wgpu::TextureFormat::Bgra8UnormSrgb;
     let mut config = wgpu::SurfaceConfiguration {
         usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-        format: format,
+        format,
         width,
         height,
         present_mode: wgpu::PresentMode::Fifo,
