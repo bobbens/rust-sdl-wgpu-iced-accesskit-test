@@ -3,6 +3,7 @@ mod iced_sdl;
 mod menu_main;
 mod scene;
 mod toolkit;
+mod toolkit_lua;
 
 //use controls::Controls;
 use menu_main::MenuMain;
