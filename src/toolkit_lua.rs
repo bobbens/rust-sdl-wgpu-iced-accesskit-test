@@ -25,22 +25,17 @@ impl Into<iced::Element<'static, Message, Theme, Renderer>> for LuaElement {
 }
 impl mlua::UserData for LuaElement {}
 
-struct LuaContainer(Option<container::Container<'static, Message, Theme, Renderer>>);
+struct LuaContainer(container::Container<'static, Message, Theme, Renderer>);
 unsafe impl Send for LuaContainer {}
 impl LuaContainer {
     fn new<C: Into<Element<'static, Message, Theme, Renderer>> + Send>(content: C) -> LuaContainer {
-        LuaContainer(Some(container(content)))
+        LuaContainer(container(content))
     }
 }
 impl mlua::UserData for LuaContainer {
     fn add_methods<M: mlua::UserDataMethods<Self>>(methods: &mut M) {
-        methods.add_method_mut("padding", |_lua, this, padding: f32| {
-            dbg!();
-            let inner = std::mem::replace(this, LuaContainer(None));
-            let Some(container) = inner.0 else {
-                return Err(mlua::Error::UserDataDestructed);
-            };
-            Ok(LuaContainer(Some(container.padding(padding))))
+        methods.add_function_mut("padding", |_lua, (this, padding): (Self, f32)| {
+            Ok(LuaContainer(this.0.padding(padding)))
         });
     }
 }
