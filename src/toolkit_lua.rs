@@ -37,6 +37,10 @@ impl mlua::UserData for LuaContainer {
         methods.add_function_mut("padding", |_lua, (this, padding): (Self, f32)| {
             Ok(LuaContainer(this.0.padding(padding)))
         });
+        methods.add_function_mut("dbg_padding", |_lua, (this, padding): (Self, f32)| {
+            dbg!(padding);
+            Ok(LuaContainer(this.0.padding(padding)))
+        });
     }
 }
 
@@ -97,7 +101,7 @@ impl ToolkitLua {
         lua.load(
             "function view() 
                 local element = Element(\"wtf\")
-                local container = Container(Element(\"Hi world\")):padding(2.0)
+                local container = Container(Element(\"Hi world\")):padding(2.0):dbg_padding(1.0)
             end",
         )
         .exec()
