@@ -1,12 +1,12 @@
 //mod controls;
 mod iced_sdl;
-mod menu_main;
+//mod menu_main;
 mod scene;
 mod toolkit;
 mod toolkit_lua;
 
 //use controls::Controls;
-use menu_main::MenuMain;
+//use menu_main::MenuMain;
 use scene::Scene;
 
 use iced::{Font, Pixels, Size};
@@ -88,12 +88,14 @@ pub fn main() -> Result<(), String> {
     let scale_factor = 1.0; // TODO hook with SDL or something
     let viewport = Viewport::with_physical_size(Size::new(width, height), scale_factor);
     let mut debug = Debug::new();
-    let controls = MenuMain::new();
+    //let controls = MenuMain::new();
     let scene = Scene::new(&device, format);
     // let mut state =
     // program::State::new(controls, viewport.logical_size(), &mut renderer, &mut debug);
     let mut state = program::State::new(
-        toolkit_lua::ToolkitLua::new().unwrap(),
+        toolkit_lua::ToolkitLua::new().unwrap_or_else(|err| {
+            panic!("{}", err);
+        }),
         viewport.logical_size(),
         &mut renderer,
         &mut debug,
@@ -160,7 +162,7 @@ pub fn main() -> Result<(), String> {
             );
 
             // Handle events from the app
-            let program = state.program();
+            //let program = state.program();
             // match program.state {
             //     menu_main::Message::ExitGame => {
             //         break 'running;
