@@ -106,7 +106,7 @@ impl ToolkitLua {
         lua.load(
             "function view() 
                 local container = Container(Element(\"Hi world\")):padding(2.0):dbg_padding(1.0)
-                return container:dbg_padding(99)
+                return container:dbg_padding(10)
             end",
         )
         .exec()
