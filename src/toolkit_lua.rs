@@ -24,6 +24,29 @@ macro_rules! lua_wrapper {
     };
 }
 
+macro_rules! impl_element_for {
+    ($($typename:ty),*) => {$(
+        impl From<$typename> for iced::Element<'static, Message, Theme, Renderer> {
+            fn from(value: $typename) -> Self {
+                value.0.into()
+            }
+        }
+    )*}
+}
+
+macro_rules! impl_fromlua_for {
+  ($($typename:ty),*) => {$(
+    impl mlua::FromLua for $typename {
+      fn from_lua(value: mlua::Value, _lua: &mlua::Lua) -> mlua::Result<Self> {
+        match value {
+          mlua::Value::UserData(ud) => Ok(ud.take::<Self>()?),
+          _ => unreachable!()
+        }
+      }
+   }
+ )*}
+}
+
 #[derive(Debug, Clone)]
 pub struct Message(mlua::Value);
 impl Message {
@@ -32,6 +55,7 @@ impl Message {
     }
 }
 impl mlua::UserData for Message {}
+impl_fromlua_for!(Message);
 
 // Wraper for Horizontal
 lua_wrapper!(LuaHorizontal, iced::alignment::Horizontal);
@@ -40,6 +64,7 @@ impl mlua::UserData for LuaHorizontal {}
 // Element Wrapper
 lua_wrapper!(LuaElement, iced::Element<'static, Message, Theme, Renderer>);
 impl mlua::UserData for LuaElement {}
+impl_element_for!(LuaButton, LuaContainer);
 
 // Button Wrapper
 lua_wrapper!(
@@ -59,11 +84,6 @@ lua_wrapper!(
     LuaContainer,
     iced_widget::Container<'static, Message, Theme, Renderer>
 );
-impl From<LuaContainer> for iced::Element<'static, Message, Theme, Renderer> {
-    fn from(value: LuaContainer) -> Self {
-        value.0.into()
-    }
-}
 impl mlua::UserData for LuaContainer {
     fn add_methods<M: mlua::UserDataMethods<Self>>(methods: &mut M) {
         methods.add_function_mut("padding", |_lua, (this, padding): (Self, f32)| {
@@ -71,20 +91,6 @@ impl mlua::UserData for LuaContainer {
         });
     }
 }
-
-macro_rules! impl_fromlua_for {
-  ($($typename:ty),*) => {$(
-    impl mlua::FromLua for $typename {
-      fn from_lua(value: mlua::Value, _lua: &mlua::Lua) -> mlua::Result<Self> {
-        match value {
-          mlua::Value::UserData(ud) => Ok(ud.take::<Self>()?),
-          _ => unreachable!()
-        }
-      }
-   }
- )*}
-}
-impl_fromlua_for!(Message);
 
 #[derive(Debug)]
 pub struct ToolkitLua {
