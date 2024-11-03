@@ -93,7 +93,7 @@ pub fn main() -> Result<(), String> {
     // let mut state =
     // program::State::new(controls, viewport.logical_size(), &mut renderer, &mut debug);
     let mut state = program::State::new(
-        toolkit_lua::ToolkitLua::new(),
+        toolkit_lua::ToolkitLua::new().unwrap(),
         viewport.logical_size(),
         &mut renderer,
         &mut debug,

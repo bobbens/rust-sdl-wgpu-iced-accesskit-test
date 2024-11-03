@@ -27,9 +27,9 @@ struct LuaElement(iced::Element<'static, Message, Theme, Renderer>);
 /// Safety:
 /// Not safe at _all_. Try to ensure that the base element is `Send`
 unsafe impl Send for LuaElement {}
-impl Into<iced::Element<'static, Message, Theme, Renderer>> for LuaElement {
-    fn into(self) -> iced::Element<'static, Message, Theme, Renderer> {
-        self.0
+impl From<LuaElement> for iced::Element<'static, Message, Theme, Renderer> {
+    fn from(value: LuaElement) -> Self {
+        value.0.into()
     }
 }
 impl mlua::UserData for LuaElement {
@@ -50,29 +50,12 @@ impl From<LuaContainer> for iced::Element<'static, Message, Theme, Renderer> {
 }
 impl mlua::UserData for LuaContainer {
     fn add_methods<M: mlua::UserDataMethods<Self>>(methods: &mut M) {
+        methods.add_function_mut("", |_lua, (this, padding): (Self, f32)| {
+            Ok(LuaContainer(this.0.padding(padding)))
+        });
         methods.add_function_mut("padding", |_lua, (this, padding): (Self, f32)| {
             Ok(LuaContainer(this.0.padding(padding)))
         });
-        methods.add_function_mut("dbg_padding", |_lua, (this, padding): (Self, f32)| {
-            dbg!(padding);
-            Ok(LuaContainer(this.0.padding(padding)))
-        });
-    }
-}
-
-impl FromLuaMulti for LuaElement {
-    fn from_lua_multi(values: mlua::MultiValue, lua: &mlua::Lua) -> mlua::Result<Self> {
-        Ok(match values.len() {
-            0 => LuaElement(iced_widget::Space::with_width(0).into()),
-            1 => match &values[0] {
-                mlua::Value::UserData(any_user_data) => any_user_data.take::<Self>()?,
-                mlua::Value::String(s) => {
-                    LuaElement(iced_widget::text(s.to_str().unwrap().to_string()).into())
-                }
-                _ => todo!(),
-            },
-            _ => todo!(),
-        })
     }
 }
 
@@ -89,7 +72,7 @@ macro_rules! impl_fromlua_for {
    }
  )*}
 }
-impl_fromlua_for!(LuaContainer, LuaHorizontal, Message);
+impl_fromlua_for!(LuaElement, LuaContainer, LuaHorizontal, Message);
 
 #[derive(Debug)]
 pub struct ToolkitLua {
@@ -99,38 +82,53 @@ pub struct ToolkitLua {
 }
 
 impl ToolkitLua {
-    pub fn new() -> ToolkitLua {
+    pub fn new() -> mlua::Result<ToolkitLua> {
         let lua = mlua::Lua::new();
+        open_iced(&lua)?;
 
-        let element = lua
-            .create_function(|lua, widget: mlua::MultiValue| {
-                LuaElement::from_lua_multi(widget, lua)
-            })
-            .unwrap();
-        lua.globals().set("Element", element).unwrap();
-        let container = lua
-            .create_function(|_, element: LuaElement| Ok(LuaContainer::new(element)))
-            .unwrap();
-        lua.globals().set("Container", container).unwrap();
-
-        lua.load("function update() end").exec().unwrap();
+        lua.load("function update() end").exec()?;
         lua.load(
             "function view()
-                local element = Element(\"wtf\")
-                local container = Container(Element(\"Hi world\")):padding(2.0):dbg_padding(1.0)
-                return container:dbg_padding(10)
+                return iced.button(\"wtf\")
             end",
         )
-        .exec()
-        .unwrap();
+        .exec()?;
 
         let globals = lua.globals();
-        ToolkitLua {
+        Ok(ToolkitLua {
             lua,
             update: globals.get("update").unwrap(),
             view: globals.get("view").unwrap(),
-        }
+        })
     }
+}
+
+fn value_to_element(
+    val: mlua::Value,
+) -> mlua::Result<iced::Element<'static, Message, Theme, Renderer>> {
+    match val {
+        mlua::Value::String(s) => Ok(iced_widget::text(s.to_string_lossy()).into()),
+        _ => Ok(iced_widget::Space::with_width(0).into()),
+    }
+}
+
+pub fn open_iced(lua: &mlua::Lua) -> mlua::Result<()> {
+    let iced = lua.create_table()?;
+    let globals = lua.globals();
+    iced.set(
+        "container",
+        lua.create_function(|_lua, val: mlua::Value| -> mlua::Result<LuaElement> {
+            Ok(LuaElement(button(value_to_element(val)?).into()))
+        })?,
+    )?;
+    iced.set(
+        "button",
+        lua.create_function(|_lua, val: mlua::Value| -> mlua::Result<LuaElement> {
+            Ok(LuaElement(button(value_to_element(val)?).into()))
+        })?,
+    )?;
+    globals.set("iced", iced)?;
+    Ok(())
 }
 
 impl Program for ToolkitLua {
@@ -144,13 +142,13 @@ impl Program for ToolkitLua {
     }
 
     fn view(&self) -> Element<Message, Theme, Renderer> {
-        let ele = self.view.call::<LuaContainer>(()).unwrap();
+        let ele = self.view.call::<LuaElement>(()).unwrap();
         container(
             container(
                 column![
                     button("Load Game"),
                     button("New Game").on_press(Message::new(mlua::Value::Nil)),
-                    ele
+                    ele,
                 ]
                 .spacing(10)
                 .padding(20)
