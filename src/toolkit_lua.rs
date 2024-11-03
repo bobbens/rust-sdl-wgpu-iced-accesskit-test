@@ -96,7 +96,7 @@ impl mlua::UserData for LuaHorizontal {}
 // Element Wrapper
 lua_wrapper!(LuaElement, iced::Element<'static, Message, Theme, Renderer>);
 impl mlua::UserData for LuaElement {}
-impl_element_for!(LuaButton, LuaContainer);
+impl_element_for!(LuaButton, LuaContainer, LuaColumn);
 
 // Button Wrapper
 lua_wrapper!(
@@ -119,6 +119,19 @@ impl mlua::UserData for LuaButton {
         });
         methods.add_function_mut("clip", |_lua, (this, val): (Self, mlua::Value)| {
             Ok(LuaButton(this.0.clip(val.as_boolean().unwrap_or(false))))
+        });
+    }
+}
+
+// Column Wrapper
+lua_wrapper!(
+    LuaColumn,
+    iced_widget::Column<'static, Message, Theme, Renderer>
+);
+impl mlua::UserData for LuaColumn {
+    fn add_methods<M: mlua::UserDataMethods<Self>>(methods: &mut M) {
+        methods.add_function_mut("padding", |_lua, (this, padding): (Self, f32)| {
+            Ok(LuaColumn(this.0.padding(padding)))
         });
     }
 }
@@ -156,9 +169,14 @@ impl ToolkitLua {
         .exec()?;
         lua.load(
             "function view()
-                return iced.button('wtf')
-                    :on_press('Yo, wtf')
-                    :padding(10)
+                return iced.column{
+                        iced.button('Load Game'),
+                        iced.button('New Game')
+                            :on_press('New Game'),
+                        iced.button('wtf')
+                            :on_press('Yo, wtf')
+                            :padding(10)
+                    }
             end",
         )
         .exec()?;
@@ -181,6 +199,10 @@ fn value_to_element(
         mlua::Value::UserData(ud) => {
             if ud.is::<LuaButton>() {
                 Ok(ud.take::<LuaButton>()?.into())
+            } else if ud.is::<LuaColumn>() {
+                Ok(ud.take::<LuaColumn>()?.into())
+            } else if ud.is::<LuaContainer>() {
+                Ok(ud.take::<LuaContainer>()?.into())
             } else {
                 Err(mlua::Error::UserDataTypeMismatch)
             }
@@ -229,6 +251,27 @@ pub fn open_iced(lua: &mlua::Lua) -> mlua::Result<()> {
         "container",
         lua.create_function(|_lua, val: mlua::Value| -> mlua::Result<LuaContainer> {
             Ok(LuaContainer(container(value_to_element(val)?).into()))
+        })?,
+    )?;
+    iced.set(
+        "column",
+        lua.create_function(|_lua, val: mlua::Value| -> mlua::Result<LuaColumn> {
+            match val {
+                mlua::Value::Table(t) => {
+                    let list: Vec<iced_core::Element<'static, Message, Theme, Renderer>> = t
+                        .sequence_values::<mlua::Value>()
+                        .map(|v| value_to_element(v.unwrap()).unwrap())
+                        .collect();
+                    Ok(LuaColumn(iced_widget::Column::from_vec(list)))
+                }
+                mlua::Value::Nil => Ok(LuaColumn(iced_widget::Column::new())),
+                _ => Err(mlua::Error::BadArgument {
+                    to: Some(String::from("iced.column")),
+                    pos: 1,
+                    name: Some(String::from("tbl")),
+                    cause: std::sync::Arc::new(mlua::Error::UserDataTypeMismatch),
+                }),
+            }
         })?,
     )?;
     iced.set(
