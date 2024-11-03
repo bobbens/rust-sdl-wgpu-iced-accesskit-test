@@ -35,8 +35,6 @@ impl Into<iced::Element<'static, Message, Theme, Renderer>> for LuaElement {
 impl mlua::UserData for LuaElement {
     fn add_methods<M: mlua::UserDataMethods<Self>>(methods: &mut M) {}
 }
-// TODO fix this
-unsafe impl Send for LuaElement {}
 
 struct LuaContainer(container::Container<'static, Message, Theme, Renderer>);
 unsafe impl Send for LuaContainer {}
@@ -45,7 +43,6 @@ impl LuaContainer {
         LuaContainer(container(content))
     }
 }
-unsafe impl Send for LuaContainer {}
 impl mlua::UserData for LuaContainer {
     fn add_methods<M: mlua::UserDataMethods<Self>>(methods: &mut M) {
         methods.add_function_mut("padding", |_lua, (this, padding): (Self, f32)| {
