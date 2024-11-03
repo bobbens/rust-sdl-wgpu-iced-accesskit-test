@@ -63,7 +63,7 @@ macro_rules! impl_fromlua_for {
   ($($typename:ty),*) => {$(
     impl mlua::FromLua for $typename {
       fn from_lua(value: mlua::Value, _lua: &mlua::Lua) -> mlua::Result<Self> {
-          dbg!(&value);
+        //dbg!(&value);
         match value {
           mlua::Value::UserData(ud) => Ok(ud.take::<Self>()?),
           _ => unreachable!()
@@ -86,7 +86,12 @@ impl ToolkitLua {
         let lua = mlua::Lua::new();
         open_iced(&lua)?;
 
-        lua.load("function update() end").exec()?;
+        lua.load(
+            "function update( msg )
+                print( msg )
+            end",
+        )
+        .exec()?;
         lua.load(
             "function view()
                 return iced.button(\"wtf\")
@@ -137,7 +142,7 @@ impl Program for ToolkitLua {
     type Renderer = Renderer;
 
     fn update(&mut self, message: Message) -> Task<Message> {
-        self.update.call::<()>(()).unwrap();
+        self.update.call::<()>(message.0).unwrap();
         Task::none()
     }
 
