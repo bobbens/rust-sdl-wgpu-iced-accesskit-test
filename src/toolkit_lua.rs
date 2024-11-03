@@ -32,6 +32,11 @@ impl LuaContainer {
         LuaContainer(container(content))
     }
 }
+impl From<LuaContainer> for iced::Element<'static, Message, Theme, Renderer> {
+    fn from(value: LuaContainer) -> Self {
+        value.0.into()
+    }
+}
 impl mlua::UserData for LuaContainer {
     fn add_methods<M: mlua::UserDataMethods<Self>>(methods: &mut M) {
         methods.add_function_mut("padding", |_lua, (this, padding): (Self, f32)| {
@@ -100,8 +105,8 @@ impl ToolkitLua {
         lua.load("function update() end").exec().unwrap();
         lua.load(
             "function view() 
-                local element = Element(\"wtf\")
                 local container = Container(Element(\"Hi world\")):padding(2.0):dbg_padding(1.0)
+                return container:dbg_padding(99)
             end",
         )
         .exec()
@@ -127,12 +132,13 @@ impl Program for ToolkitLua {
     }
 
     fn view(&self) -> Element<Message, Theme, Renderer> {
-        self.view.call::<()>(()).unwrap();
+        let ele = self.view.call::<LuaContainer>(()).unwrap();
         container(
             container(
                 column![
                     button("Load Game"),
                     button("New Game").on_press(Message::new(mlua::Value::Nil)),
+                    ele
                 ]
                 .spacing(10)
                 .padding(20)
