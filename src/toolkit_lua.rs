@@ -3,7 +3,7 @@ use iced_core::{Element, Theme};
 use iced_runtime::{Program, Task};
 use iced_wgpu::Renderer;
 use iced_widget::{button, column, container};
-use mlua::{Chunk, FromLuaMulti, UserData};
+use mlua::FromLuaMulti;
 
 #[derive(Debug, Clone)]
 pub struct Message(mlua::Value);
@@ -60,7 +60,7 @@ impl mlua::UserData for LuaContainer {
     }
 }
 
-impl mlua::FromLuaMulti for LuaElement {
+impl FromLuaMulti for LuaElement {
     fn from_lua_multi(values: mlua::MultiValue, lua: &mlua::Lua) -> mlua::Result<Self> {
         Ok(match values.len() {
             0 => LuaElement(iced_widget::Space::with_width(0).into()),
