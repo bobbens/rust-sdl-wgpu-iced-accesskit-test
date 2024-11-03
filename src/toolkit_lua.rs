@@ -40,14 +40,14 @@ impl From<LuaButton> for iced_widget::Button<'static, Message, Theme, Renderer> 
         value.0.into()
     }
 }
+impl From<LuaButton> for iced::Element<'static, Message, Theme, Renderer> {
+    fn from(value: LuaButton) -> Self {
+        value.0.into()
+    }
+}
 impl mlua::UserData for LuaButton {
     fn add_methods<M: mlua::UserDataMethods<Self>>(methods: &mut M) {
-        methods.add_meta_method(mlua::MetaMethod::ToString, |_, _this, _val: mlua::Value| {
-            dbg!("tostring");
-            Ok(mlua::Value::Nil)
-        });
         methods.add_function_mut("on_press", |_lua, (this, val): (Self, mlua::Value)| {
-            dbg!("on_press");
             Ok(LuaButton(this.0.on_press(Message(val))))
         });
     }
@@ -103,12 +103,6 @@ impl ToolkitLua {
         .exec()?;
         lua.load(
             "function view()
-                print( iced )
-                print( iced.button )
-                print( iced.button(\"wtf\") )
-                print( iced.button(\"wtf\").__tostring )
-                print( iced.button(\"wtf\").on_press )
-                print( iced.button(\"wtf\"):on_press(\"Yo, wtf\") )
                 return iced.button(\"wtf\"):on_press(\"Yo, wtf\")
             end",
         )
@@ -129,7 +123,14 @@ fn value_to_element(
     //dbg!(&val);
     match val {
         mlua::Value::String(s) => Ok(iced_widget::text(s.to_string_lossy()).into()),
-        _ => Ok(iced_widget::Space::with_width(0).into()),
+        mlua::Value::UserData(ud) => {
+            if ud.is::<LuaButton>() {
+                Ok(ud.take::<LuaButton>()?.into())
+            } else {
+                Err(mlua::Error::UserDataTypeMismatch)
+            }
+        }
+        _ => Err(mlua::Error::UserDataTypeMismatch),
     }
 }
 
@@ -144,8 +145,8 @@ pub fn open_iced(lua: &mlua::Lua) -> mlua::Result<()> {
     )?;
     iced.set(
         "button",
-        lua.create_function(|_lua, val: mlua::Value| -> mlua::Result<LuaElement> {
-            Ok(LuaElement(button(value_to_element(val)?).into()))
+        lua.create_function(|_lua, val: mlua::Value| -> mlua::Result<LuaButton> {
+            Ok(LuaButton(button(value_to_element(val)?).into()))
         })?,
     )?;
     globals.set("iced", iced)?;
