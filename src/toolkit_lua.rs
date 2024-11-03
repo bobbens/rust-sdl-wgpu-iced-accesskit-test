@@ -4,6 +4,26 @@ use iced_runtime::{Program, Task};
 use iced_wgpu::Renderer;
 use iced_widget::{button, column, container};
 
+macro_rules! lua_wrapper {
+    ($wrapper: ident, $wrapped: ty) => {
+        struct $wrapper($wrapped);
+        unsafe impl Send for $wrapper {}
+        impl mlua::FromLua for $wrapper {
+            fn from_lua(value: mlua::Value, _lua: &mlua::Lua) -> mlua::Result<Self> {
+                match value {
+                    mlua::Value::UserData(ud) => Ok(ud.take::<Self>()?),
+                    _ => unreachable!(),
+                }
+            }
+        }
+        impl From<$wrapper> for $wrapped {
+            fn from(value: $wrapper) -> Self {
+                value.0.into()
+            }
+        }
+    };
+}
+
 #[derive(Debug, Clone)]
 pub struct Message(mlua::Value);
 impl Message {
@@ -14,37 +34,18 @@ impl Message {
 impl mlua::UserData for Message {}
 
 // Wraper for Horizontal
-struct LuaHorizontal(iced::alignment::Horizontal);
-impl Into<iced::alignment::Horizontal> for LuaHorizontal {
-    fn into(self) -> iced::alignment::Horizontal {
-        self.0
-    }
-}
+lua_wrapper!(LuaHorizontal, iced::alignment::Horizontal);
 impl mlua::UserData for LuaHorizontal {}
 
-struct LuaElement(iced::Element<'static, Message, Theme, Renderer>);
-/// Safety:
-/// Not safe at _all_. Try to ensure that the base element is `Send`
-unsafe impl Send for LuaElement {}
-impl From<LuaElement> for iced::Element<'static, Message, Theme, Renderer> {
-    fn from(value: LuaElement) -> Self {
-        value.0.into()
-    }
-}
+// Element Wrapper
+lua_wrapper!(LuaElement, iced::Element<'static, Message, Theme, Renderer>);
 impl mlua::UserData for LuaElement {}
 
-struct LuaButton(iced_widget::Button<'static, Message, Theme, Renderer>);
-unsafe impl Send for LuaButton {}
-impl From<LuaButton> for iced_widget::Button<'static, Message, Theme, Renderer> {
-    fn from(value: LuaButton) -> Self {
-        value.0.into()
-    }
-}
-impl From<LuaButton> for iced::Element<'static, Message, Theme, Renderer> {
-    fn from(value: LuaButton) -> Self {
-        value.0.into()
-    }
-}
+// Button Wrapper
+lua_wrapper!(
+    LuaButton,
+    iced_widget::Button<'static, Message, Theme, Renderer>
+);
 impl mlua::UserData for LuaButton {
     fn add_methods<M: mlua::UserDataMethods<Self>>(methods: &mut M) {
         methods.add_function_mut("on_press", |_lua, (this, val): (Self, mlua::Value)| {
@@ -53,8 +54,11 @@ impl mlua::UserData for LuaButton {
     }
 }
 
-struct LuaContainer(container::Container<'static, Message, Theme, Renderer>);
-unsafe impl Send for LuaContainer {}
+// Container Wrapper
+lua_wrapper!(
+    LuaContainer,
+    iced_widget::Container<'static, Message, Theme, Renderer>
+);
 impl From<LuaContainer> for iced::Element<'static, Message, Theme, Renderer> {
     fn from(value: LuaContainer) -> Self {
         value.0.into()
@@ -72,7 +76,6 @@ macro_rules! impl_fromlua_for {
   ($($typename:ty),*) => {$(
     impl mlua::FromLua for $typename {
       fn from_lua(value: mlua::Value, _lua: &mlua::Lua) -> mlua::Result<Self> {
-        //dbg!(&value);
         match value {
           mlua::Value::UserData(ud) => Ok(ud.take::<Self>()?),
           _ => unreachable!()
@@ -81,7 +84,7 @@ macro_rules! impl_fromlua_for {
    }
  )*}
 }
-impl_fromlua_for!(LuaButton, LuaElement, LuaContainer, LuaHorizontal, Message);
+impl_fromlua_for!(Message);
 
 #[derive(Debug)]
 pub struct ToolkitLua {
