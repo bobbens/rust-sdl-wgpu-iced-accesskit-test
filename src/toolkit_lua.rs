@@ -82,7 +82,7 @@ impl mlua::FromLua for LuaLength {
         match value {
             mlua::Value::Integer(n) => Ok(LuaLength(iced::Length::Fixed(n as f32))),
             mlua::Value::Number(n) => Ok(LuaLength(iced::Length::Fixed(n as f32))),
-            mlua::Value::UserData(ud) => Ok(ud.take::<Self>()?),
+            mlua::Value::UserData(ud) => Ok(Self(ud.borrow::<Self>()?.0.clone())),
             _ => Err(mlua::Error::FromLuaConversionError {
                 from: value.type_name(),
                 to: String::from("LuaLength"),
@@ -100,7 +100,7 @@ impl mlua::FromLua for LuaPadding {
         match value {
             mlua::Value::Integer(n) => Ok(LuaPadding(iced::Padding::new(n as f32))),
             mlua::Value::Number(n) => Ok(LuaPadding(iced::Padding::new(n as f32))),
-            mlua::Value::UserData(ud) => Ok(ud.take::<Self>()?),
+            mlua::Value::UserData(ud) => Ok(Self(ud.borrow::<Self>()?.0.clone())),
             _ => Err(mlua::Error::FromLuaConversionError {
                 from: value.type_name(),
                 to: String::from("LuaPadding"),
@@ -111,15 +111,15 @@ impl mlua::FromLua for LuaPadding {
 }
 
 // Wrapper for Alignment
-lua_wrapper!(LuaAlignment, iced::alignment::Alignment);
+lua_wrapper!(clone LuaAlignment, iced::alignment::Alignment);
 impl mlua::UserData for LuaAlignment {}
 
 // Wrapper for Horizontal
-lua_wrapper!(LuaHorizontal, iced::alignment::Horizontal);
+lua_wrapper!(clone LuaHorizontal, iced::alignment::Horizontal);
 impl mlua::UserData for LuaHorizontal {}
 
 // Wrapper for Vertical
-lua_wrapper!(LuaVertical, iced::alignment::Vertical);
+lua_wrapper!(clone LuaVertical, iced::alignment::Vertical);
 impl mlua::UserData for LuaVertical {}
 
 // Wrapper for Pixels
@@ -130,7 +130,7 @@ impl mlua::FromLua for LuaPixels {
         match value {
             mlua::Value::Integer(n) => Ok(LuaPixels(iced::Pixels(n as f32))),
             mlua::Value::Number(n) => Ok(LuaPixels(iced::Pixels(n as f32))),
-            mlua::Value::UserData(ud) => Ok(ud.take::<Self>()?),
+            mlua::Value::UserData(ud) => Ok(Self(ud.borrow::<Self>()?.0.clone())),
             _ => Err(mlua::Error::FromLuaConversionError {
                 from: value.type_name(),
                 to: String::from("LuaPixels"),
@@ -145,7 +145,7 @@ lua_wrapper!(clone LuaColor, iced::Color);
 impl mlua::UserData for LuaColor {}
 
 // Wrapper for Border
-lua_wrapper!(LuaBorder, iced::Border);
+lua_wrapper!(clone LuaBorder, iced::Border);
 impl mlua::UserData for LuaBorder {}
 
 // Wrapper for Radius
@@ -156,7 +156,7 @@ impl mlua::FromLua for LuaRadius {
         match value {
             mlua::Value::Integer(n) => Ok(LuaRadius((n as f32).into())),
             mlua::Value::Number(n) => Ok(LuaRadius((n as f32).into())),
-            mlua::Value::UserData(ud) => Ok(ud.take::<Self>()?),
+            mlua::Value::UserData(ud) => Ok(Self(ud.borrow::<Self>()?.0.clone())),
             _ => Err(mlua::Error::FromLuaConversionError {
                 from: value.type_name(),
                 to: String::from("LuaRadius"),
@@ -190,15 +190,15 @@ impl mlua::FromLua for LuaBackground {
 }
 
 // Wrapper for Shadow
-lua_wrapper!(LuaShadow, iced::Shadow);
+lua_wrapper!(clone LuaShadow, iced::Shadow);
 impl mlua::UserData for LuaShadow {}
 
 // Wrapper for Palette
-lua_wrapper!(LuaPalette, iced::theme::Palette);
+lua_wrapper!(clone LuaPalette, iced::theme::Palette);
 impl mlua::UserData for LuaPalette {}
 
 // Wrapper for Theme
-lua_wrapper!(LuaTheme, Theme);
+lua_wrapper!(clone LuaTheme, Theme);
 impl mlua::UserData for LuaTheme {}
 
 // Wrapper for Container Style
