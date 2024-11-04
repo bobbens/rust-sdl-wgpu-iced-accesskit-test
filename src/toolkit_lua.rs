@@ -1,8 +1,5 @@
-use iced::{Center, Fill};
-use iced_core::{Element, Theme};
-use iced_runtime::{Program, Task};
+use iced_core::Theme;
 use iced_wgpu::Renderer;
-use iced_widget::{button, column, container};
 
 macro_rules! lua_wrapper_min {
     ($wrapper: ident, $wrapped: ty) => {
@@ -384,7 +381,9 @@ pub fn open_iced(lua: &mlua::Lua) -> mlua::Result<()> {
     iced.set(
         "container",
         lua.create_function(|_lua, val: mlua::Value| -> mlua::Result<LuaContainer> {
-            Ok(LuaContainer(container(value_to_element(val)?).into()))
+            Ok(LuaContainer(
+                iced_widget::container(value_to_element(val)?).into(),
+            ))
         })?,
     )?;
     iced.set(
@@ -411,24 +410,26 @@ pub fn open_iced(lua: &mlua::Lua) -> mlua::Result<()> {
     iced.set(
         "button",
         lua.create_function(|_lua, val: mlua::Value| -> mlua::Result<LuaButton> {
-            Ok(LuaButton(button(value_to_element(val)?).into()))
+            Ok(LuaButton(
+                iced_widget::button(value_to_element(val)?).into(),
+            ))
         })?,
     )?;
     globals.set("iced", iced)?;
     Ok(())
 }
 
-impl Program for ToolkitLua {
+impl iced_runtime::Program for ToolkitLua {
     type Theme = Theme;
     type Message = Message;
     type Renderer = Renderer;
 
-    fn update(&mut self, message: Message) -> Task<Message> {
+    fn update(&mut self, message: Message) -> iced_runtime::Task<Message> {
         self.update.call::<()>(message.0).unwrap();
-        Task::none()
+        iced_runtime::Task::none()
     }
 
-    fn view(&self) -> Element<Message, Theme, Renderer> {
+    fn view(&self) -> iced_core::Element<Message, Theme, Renderer> {
         let ele = value_to_element(self.view.call::<mlua::Value>(()).unwrap_or_else(|err| {
             panic!("{}", err);
         }))
