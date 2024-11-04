@@ -56,11 +56,6 @@ macro_rules! impl_fromlua_for {
 
 #[derive(Debug, Clone)]
 pub struct Message(mlua::Value);
-impl Message {
-    fn new<V: Into<mlua::Value> + Send>(value: V) -> Message {
-        Message(value.into())
-    }
-}
 impl mlua::UserData for Message {}
 impl_fromlua_for!(Message);
 
@@ -127,6 +122,82 @@ impl mlua::FromLua for LuaPixels {
                 message: None,
             }),
         }
+    }
+}
+
+// Wrapper for Color
+lua_wrapper!(LuaColor, iced::Color);
+impl mlua::UserData for LuaColor {}
+
+// Wrapper for Border
+lua_wrapper!(LuaBorder, iced::Border);
+impl mlua::UserData for LuaBorder {}
+
+// Wrapper for Radius
+lua_wrapper_min!(LuaRadius, iced::border::Radius);
+impl mlua::UserData for LuaRadius {}
+impl mlua::FromLua for LuaRadius {
+    fn from_lua(value: mlua::Value, _lua: &mlua::Lua) -> mlua::Result<Self> {
+        match value {
+            mlua::Value::Integer(n) => Ok(LuaRadius((n as f32).into())),
+            mlua::Value::Number(n) => Ok(LuaRadius((n as f32).into())),
+            mlua::Value::UserData(ud) => Ok(ud.take::<Self>()?),
+            _ => Err(mlua::Error::FromLuaConversionError {
+                from: value.type_name(),
+                to: String::from("LuaRadius"),
+                message: None,
+            }),
+        }
+    }
+}
+
+// Wrapper for Background
+lua_wrapper_min!(LuaBackground, iced::Background);
+impl mlua::UserData for LuaBackground {}
+impl mlua::FromLua for LuaBackground {
+    fn from_lua(value: mlua::Value, _lua: &mlua::Lua) -> mlua::Result<Self> {
+        match value {
+            mlua::Value::UserData(ud) => {
+                if ud.is::<LuaColor>() {
+                    let col = ud.borrow::<LuaColor>()?;
+                    Ok(LuaBackground(iced::Background::Color(col.0)))
+                } else {
+                    Err(mlua::Error::UserDataTypeMismatch)
+                }
+            }
+            _ => Err(mlua::Error::FromLuaConversionError {
+                from: value.type_name(),
+                to: String::from("LuaBackground"),
+                message: None,
+            }),
+        }
+    }
+}
+
+// Wrapper for Shadow
+lua_wrapper!(LuaShadow, iced::Shadow);
+impl mlua::UserData for LuaShadow {}
+
+// Wrapper for Theme
+lua_wrapper!(LuaTheme, Theme);
+impl mlua::UserData for LuaTheme {}
+
+// Wrapper for Container Style
+lua_wrapper!(LuaContainerStyle, iced::widget::container::Style);
+impl mlua::UserData for LuaContainerStyle {
+    fn add_methods<M: mlua::UserDataMethods<Self>>(methods: &mut M) {
+        methods.add_function_mut("color", |_lua, (this, val): (Self, LuaColor)| {
+            Ok(LuaContainerStyle(this.0.color(val)))
+        });
+        methods.add_function_mut("border", |_lua, (this, val): (Self, LuaBorder)| {
+            Ok(LuaContainerStyle(this.0.border(val)))
+        });
+        methods.add_function_mut("background", |_lua, (this, val): (Self, LuaBackground)| {
+            Ok(LuaContainerStyle(this.0.background(val)))
+        });
+        methods.add_function_mut("shadow", |_lua, (this, val): (Self, LuaShadow)| {
+            Ok(LuaContainerStyle(this.0.shadow(val)))
+        });
     }
 }
 
@@ -249,9 +320,20 @@ impl mlua::UserData for LuaContainer {
                 this.0.align_y(iced::alignment::Vertical::from(val.0)),
             ))
         });
+        methods.add_function_mut("clip", |_lua, (this, val): (Self, mlua::Value)| {
+            Ok(LuaContainer(this.0.clip(val.as_boolean().unwrap_or(false))))
+        });
+        methods.add_function_mut("style", |_lua, (this, func): (Self, mlua::Function)| {
+            Ok(LuaContainer(this.0.style(move |theme: &Theme| {
+                func.call::<LuaContainerStyle>(LuaTheme(theme.clone()))
+                    .unwrap()
+                    .0
+            })))
+        });
     }
 }
 
+#[allow(dead_code)]
 #[derive(Debug)]
 pub struct ToolkitLua {
     lua: mlua::Lua,
@@ -265,13 +347,21 @@ impl ToolkitLua {
         open_iced(&lua)?;
 
         lua.load(
-            "function update( msg )
-                print( msg )
-            end",
+            "
+function update( msg )
+    print( msg )
+end
+            ",
         )
         .exec()?;
         lua.load(
             "
+local function window( theme )
+    return iced.Container.style()
+    :border( iced.border( iced.color(0,1,0,1), 1, 10 ) )
+    :background( iced.color(0,0,1,1) )
+end
+
 function view()
     return iced.container(
         iced.container(
@@ -283,10 +373,10 @@ function view()
             :padding(20)
             :align_x( iced.Center() )
         )
+        :style( window )
         :align_x( iced.Center() )
         :width( 150 )
     )
-    --:style( iced.transparent )
     :center( iced.Fill() )
 end
         ",
@@ -377,6 +467,28 @@ pub fn open_iced(lua: &mlua::Lua) -> mlua::Result<()> {
             Ok(LuaAlignment(iced::Alignment::End))
         })?,
     )?;
+    // Color
+    iced.set(
+        "color",
+        lua.create_function(
+            |_lua, (r, g, b, a): (f32, f32, f32, f32)| -> mlua::Result<LuaColor> {
+                Ok(LuaColor(iced::Color::new(r, g, b, a)))
+            },
+        )?,
+    )?;
+    // Border
+    iced.set(
+        "border",
+        lua.create_function(
+            |_lua, (color, width, radius): (LuaColor, f32, LuaRadius)| -> mlua::Result<LuaBorder> {
+                Ok(LuaBorder(iced::Border {
+                    color: color.0,
+                    width,
+                    radius: radius.0,
+                }))
+            },
+        )?,
+    )?;
     // Widgets
     iced.set(
         "container",
@@ -386,6 +498,14 @@ pub fn open_iced(lua: &mlua::Lua) -> mlua::Result<()> {
             ))
         })?,
     )?;
+    let container = lua.create_table()?;
+    container.set(
+        "style",
+        lua.create_function(|_lua, ()| -> mlua::Result<LuaContainerStyle> {
+            Ok(LuaContainerStyle(iced_widget::container::Style::default()))
+        })?,
+    )?;
+    iced.set("Container", container)?;
     iced.set(
         "column",
         lua.create_function(|_lua, val: mlua::Value| -> mlua::Result<LuaColumn> {

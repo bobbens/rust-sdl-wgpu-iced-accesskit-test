@@ -39,6 +39,7 @@ pub fn theme() -> iced::theme::Theme {
     //iced::theme::Theme::Dark.clone()
 }
 
+#[allow(dead_code)]
 pub fn window(theme: &Theme) -> Style {
     let palext = theme.extended_palette();
     let palette = theme.palette();
