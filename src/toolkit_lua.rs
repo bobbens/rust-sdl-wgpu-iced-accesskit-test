@@ -67,11 +67,11 @@ impl Message {
 impl mlua::UserData for Message {}
 impl_fromlua_for!(Message);
 
-// Wraper for Length
+// Wrapper for Length
 lua_wrapper!(LuaLength, iced::Length);
 impl mlua::UserData for LuaLength {}
 
-// Wraper for Padding
+// Wrapper for Padding
 lua_wrapper_min!(LuaPadding, iced::Padding);
 impl mlua::UserData for LuaPadding {}
 impl mlua::FromLua for LuaPadding {
@@ -89,9 +89,35 @@ impl mlua::FromLua for LuaPadding {
     }
 }
 
-// Wraper for Horizontal
+// Wrapper for Alignment
+lua_wrapper!(LuaAlignment, iced::alignment::Alignment);
+impl mlua::UserData for LuaAlignment {}
+
+// Wrapper for Horizontal
 lua_wrapper!(LuaHorizontal, iced::alignment::Horizontal);
 impl mlua::UserData for LuaHorizontal {}
+
+// Wrapper for Vertical
+lua_wrapper!(LuaVertical, iced::alignment::Vertical);
+impl mlua::UserData for LuaVertical {}
+
+// Wrapper for Pixels
+lua_wrapper_min!(LuaPixels, iced::Pixels);
+impl mlua::UserData for LuaPixels {}
+impl mlua::FromLua for LuaPixels {
+    fn from_lua(value: mlua::Value, _lua: &mlua::Lua) -> mlua::Result<Self> {
+        match value {
+            mlua::Value::Integer(n) => Ok(LuaPixels(iced::Pixels(n as f32))),
+            mlua::Value::Number(n) => Ok(LuaPixels(iced::Pixels(n as f32))),
+            mlua::Value::UserData(ud) => Ok(ud.take::<Self>()?),
+            _ => Err(mlua::Error::FromLuaConversionError {
+                from: value.type_name(),
+                to: String::from("LuaPixels"),
+                message: None,
+            }),
+        }
+    }
+}
 
 // Element Wrapper
 lua_wrapper!(LuaElement, iced::Element<'static, Message, Theme, Renderer>);
@@ -130,8 +156,29 @@ lua_wrapper!(
 );
 impl mlua::UserData for LuaColumn {
     fn add_methods<M: mlua::UserDataMethods<Self>>(methods: &mut M) {
-        methods.add_function_mut("padding", |_lua, (this, padding): (Self, f32)| {
+        methods.add_function_mut("spacing", |_lua, (this, spacing): (Self, LuaPixels)| {
+            Ok(LuaColumn(this.0.spacing(spacing)))
+        });
+        methods.add_function_mut("padding", |_lua, (this, padding): (Self, LuaPadding)| {
             Ok(LuaColumn(this.0.padding(padding)))
+        });
+        methods.add_function_mut("width", |_lua, (this, val): (Self, LuaLength)| {
+            Ok(LuaColumn(this.0.width(val)))
+        });
+        methods.add_function_mut("height", |_lua, (this, val): (Self, LuaLength)| {
+            Ok(LuaColumn(this.0.height(val)))
+        });
+        methods.add_function_mut("max_width", |_lua, (this, val): (Self, LuaPixels)| {
+            Ok(LuaColumn(this.0.max_width(val)))
+        });
+        methods.add_function_mut("align_x", |_lua, (this, val): (Self, LuaHorizontal)| {
+            Ok(LuaColumn(this.0.align_x(val)))
+        });
+        methods.add_function_mut("clip", |_lua, (this, val): (Self, mlua::Value)| {
+            Ok(LuaColumn(this.0.clip(val.as_boolean().unwrap_or(false))))
+        });
+        methods.add_function_mut("push", |_lua, (this, val): (Self, mlua::Value)| {
+            Ok(LuaColumn(this.0.push(value_to_element(val)?)))
         });
     }
 }
@@ -244,6 +291,25 @@ pub fn open_iced(lua: &mlua::Lua) -> mlua::Result<()> {
         "padding",
         lua.create_function(|_lua, val: f32| -> mlua::Result<LuaPadding> {
             Ok(LuaPadding(iced::Padding::new(val)))
+        })?,
+    )?;
+    // Alignment
+    iced.set(
+        "Start",
+        lua.create_function(|_lua, ()| -> mlua::Result<LuaAlignment> {
+            Ok(LuaAlignment(iced::Alignment::Start))
+        })?,
+    )?;
+    iced.set(
+        "Center",
+        lua.create_function(|_lua, ()| -> mlua::Result<LuaAlignment> {
+            Ok(LuaAlignment(iced::Alignment::Center))
+        })?,
+    )?;
+    iced.set(
+        "End",
+        lua.create_function(|_lua, ()| -> mlua::Result<LuaAlignment> {
+            Ok(LuaAlignment(iced::Alignment::End))
         })?,
     )?;
     // Widgets
