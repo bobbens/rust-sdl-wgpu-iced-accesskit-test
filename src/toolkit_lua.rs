@@ -195,11 +195,87 @@ impl mlua::UserData for LuaShadow {}
 
 // Wrapper for Palette
 lua_wrapper!(clone LuaPalette, iced::theme::Palette);
-impl mlua::UserData for LuaPalette {}
+impl mlua::UserData for LuaPalette {
+    fn add_fields<F: mlua::UserDataFields<Self>>(fields: &mut F) {
+        fields.add_field_method_get("background", |_, this| Ok(LuaColor(this.0.background)));
+        fields.add_field_method_get("text", |_, this| Ok(LuaColor(this.0.text)));
+        fields.add_field_method_get("primary", |_, this| Ok(LuaColor(this.0.primary)));
+        fields.add_field_method_get("success", |_, this| Ok(LuaColor(this.0.success)));
+        fields.add_field_method_get("danger", |_, this| Ok(LuaColor(this.0.danger)));
+    }
+    fn add_methods<M: mlua::UserDataMethods<Self>>(methods: &mut M) {
+        methods.add_function_mut("generate", |_lua, this: Self| {
+            Ok(LuaExtended(iced::theme::palette::Extended::generate(
+                this.0.clone(),
+            )))
+        });
+    }
+}
+
+lua_wrapper!(clone LuaPalettePair, iced::theme::palette::Pair);
+impl mlua::UserData for LuaPalettePair {
+    fn add_fields<F: mlua::UserDataFields<Self>>(fields: &mut F) {
+        fields.add_field_method_get("color", |_, this| Ok(LuaColor(this.0.color)));
+        fields.add_field_method_get("text", |_, this| Ok(LuaColor(this.0.text)));
+        fields.add_field_method_set("color", |_, this, value: LuaColor| {
+            this.0.color = value.0;
+            Ok(())
+        });
+        fields.add_field_method_set("text", |_, this, value: LuaColor| {
+            this.0.text = value.0;
+            Ok(())
+        });
+    }
+}
+
+// The Extended triplet pair stuff is the same, so macro it
+macro_rules! lua_extended {
+    ($wrapper: ident, $wrapped: ty) => {
+        lua_wrapper!(clone $wrapper, $wrapped);
+        impl mlua::UserData for $wrapper {
+            fn add_fields<F: mlua::UserDataFields<Self>>(fields: &mut F) {
+                fields.add_field_method_get("base", |_, this| Ok(LuaPalettePair(this.0.base)));
+                fields.add_field_method_get("weak", |_, this| Ok(LuaPalettePair(this.0.weak)));
+                fields.add_field_method_get("strong", |_, this| Ok(LuaPalettePair(this.0.strong)));
+            }
+        }
+    };
+}
+lua_extended!(LuaExtendedBackground, iced::theme::palette::Background);
+lua_extended!(LuaExtendedPrimary, iced::theme::palette::Primary);
+lua_extended!(LuaExtendedSecondary, iced::theme::palette::Secondary);
+lua_extended!(LuaExtendedSuccess, iced::theme::palette::Success);
+lua_extended!(LuaExtendedDanger, iced::theme::palette::Danger);
+
+// Wrapper for Extended
+lua_wrapper!(clone LuaExtended, iced::theme::palette::Extended);
+impl mlua::UserData for LuaExtended {
+    fn add_fields<F: mlua::UserDataFields<Self>>(fields: &mut F) {
+        fields.add_field_method_get("background", |_, this| {
+            Ok(LuaExtendedBackground(this.0.background))
+        });
+        fields.add_field_method_get("primary", |_, this| Ok(LuaExtendedPrimary(this.0.primary)));
+        fields.add_field_method_get("secondary", |_, this| {
+            Ok(LuaExtendedSecondary(this.0.secondary))
+        });
+        fields.add_field_method_get("success", |_, this| Ok(LuaExtendedSuccess(this.0.success)));
+        fields.add_field_method_get("danger", |_, this| Ok(LuaExtendedDanger(this.0.danger)));
+        fields.add_field_method_get("is_dark", |_, this| Ok(this.0.is_dark));
+    }
+}
 
 // Wrapper for Theme
 lua_wrapper!(clone LuaTheme, Theme);
-impl mlua::UserData for LuaTheme {}
+impl mlua::UserData for LuaTheme {
+    fn add_methods<M: mlua::UserDataMethods<Self>>(methods: &mut M) {
+        methods.add_function_mut("palette", |_lua, this: Self| {
+            Ok(LuaPalette(this.0.palette()))
+        });
+        methods.add_function_mut("extended_palette", |_lua, this: Self| {
+            Ok(LuaExtended(this.0.extended_palette().clone()))
+        });
+    }
+}
 
 // Wrapper for Container Style
 lua_wrapper!(LuaContainerStyle, iced::widget::container::Style);
@@ -375,15 +451,22 @@ local PALETTE = iced.palette(
     iced.color( 204.0 / 255.0, 68.0 / 255.0, 153.0 / 255.0, 1 ) -- danger
 )
 
+local function generate( palette )
+    local palext = palette:generate()
+    return palext
+end
+
 function update( msg )
     print( msg )
 end
 
 local function window( theme )
-    local mcolor = iced.color(0,1,0,1)
+    local palette = theme:palette()
+    local palext = theme:extended_palette()
+
     return iced.Container.style()
-    :border( iced.border( mcolor, 1, 10 ) )
-    :background( mcolor )
+    :border( iced.border( palext.background.strong.color, 1, 10 ) )
+    :background( palette.background )
 end
 
 function view()
@@ -392,6 +475,10 @@ function view()
             iced.column{
                 iced.button('Load Game'),
                 iced.button('New Game'):on_press('New Game'),
+                iced.button('Editors'):on_press('Editors'),
+                iced.button('Options'):on_press('Options'),
+                iced.button('Credits'):on_press('Credits'),
+                iced.button('Exit Game'):on_press('Exit Game'),
             }
             :spacing(10)
             :padding(20)
