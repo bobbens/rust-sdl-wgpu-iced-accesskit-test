@@ -25,7 +25,7 @@ macro_rules! lua_wrapper {
                     mlua::Value::UserData(ud) => Ok(ud.take::<Self>()?),
                     _ => Err(mlua::Error::FromLuaConversionError {
                         from: value.type_name(),
-                        to: String::from("$wrapper"),
+                        to: String::from(std::any::type_name::<$wrapper>()),
                         message: None,
                     }),
                 }
@@ -68,8 +68,22 @@ impl mlua::UserData for Message {}
 impl_fromlua_for!(Message);
 
 // Wrapper for Length
-lua_wrapper!(LuaLength, iced::Length);
+lua_wrapper_min!(LuaLength, iced::Length);
 impl mlua::UserData for LuaLength {}
+impl mlua::FromLua for LuaLength {
+    fn from_lua(value: mlua::Value, _lua: &mlua::Lua) -> mlua::Result<Self> {
+        match value {
+            mlua::Value::Integer(n) => Ok(LuaLength(iced::Length::Fixed(n as f32))),
+            mlua::Value::Number(n) => Ok(LuaLength(iced::Length::Fixed(n as f32))),
+            mlua::Value::UserData(ud) => Ok(ud.take::<Self>()?),
+            _ => Err(mlua::Error::FromLuaConversionError {
+                from: value.type_name(),
+                to: String::from("LuaLength"),
+                message: None,
+            }),
+        }
+    }
+}
 
 // Wrapper for Padding
 lua_wrapper_min!(LuaPadding, iced::Padding);
@@ -171,8 +185,10 @@ impl mlua::UserData for LuaColumn {
         methods.add_function_mut("max_width", |_lua, (this, val): (Self, LuaPixels)| {
             Ok(LuaColumn(this.0.max_width(val)))
         });
-        methods.add_function_mut("align_x", |_lua, (this, val): (Self, LuaHorizontal)| {
-            Ok(LuaColumn(this.0.align_x(val)))
+        methods.add_function_mut("align_x", |_lua, (this, val): (Self, LuaAlignment)| {
+            Ok(LuaColumn(
+                this.0.align_x(iced::alignment::Horizontal::from(val.0)),
+            ))
         });
         methods.add_function_mut("clip", |_lua, (this, val): (Self, mlua::Value)| {
             Ok(LuaColumn(this.0.clip(val.as_boolean().unwrap_or(false))))
@@ -192,6 +208,49 @@ impl mlua::UserData for LuaContainer {
     fn add_methods<M: mlua::UserDataMethods<Self>>(methods: &mut M) {
         methods.add_function_mut("padding", |_lua, (this, padding): (Self, f32)| {
             Ok(LuaContainer(this.0.padding(padding)))
+        });
+        methods.add_function_mut("width", |_lua, (this, val): (Self, LuaLength)| {
+            Ok(LuaContainer(this.0.width(val)))
+        });
+        methods.add_function_mut("height", |_lua, (this, val): (Self, LuaLength)| {
+            Ok(LuaContainer(this.0.height(val)))
+        });
+        methods.add_function_mut("max_width", |_lua, (this, val): (Self, LuaPixels)| {
+            Ok(LuaContainer(this.0.max_width(val)))
+        });
+        methods.add_function_mut("max_height", |_lua, (this, val): (Self, LuaPixels)| {
+            Ok(LuaContainer(this.0.max_height(val)))
+        });
+        methods.add_function_mut("center_x", |_lua, (this, val): (Self, LuaLength)| {
+            Ok(LuaContainer(this.0.center_x(val)))
+        });
+        methods.add_function_mut("center_y", |_lua, (this, val): (Self, LuaLength)| {
+            Ok(LuaContainer(this.0.center_y(val)))
+        });
+        methods.add_function_mut("center", |_lua, (this, val): (Self, LuaLength)| {
+            Ok(LuaContainer(this.0.center(val)))
+        });
+        methods.add_function_mut("align_left", |_lua, (this, val): (Self, LuaLength)| {
+            Ok(LuaContainer(this.0.align_left(val)))
+        });
+        methods.add_function_mut("align_right", |_lua, (this, val): (Self, LuaLength)| {
+            Ok(LuaContainer(this.0.align_right(val)))
+        });
+        methods.add_function_mut("align_top", |_lua, (this, val): (Self, LuaLength)| {
+            Ok(LuaContainer(this.0.align_top(val)))
+        });
+        methods.add_function_mut("align_bottom", |_lua, (this, val): (Self, LuaLength)| {
+            Ok(LuaContainer(this.0.align_bottom(val)))
+        });
+        methods.add_function_mut("align_x", |_lua, (this, val): (Self, LuaAlignment)| {
+            Ok(LuaContainer(
+                this.0.align_x(iced::alignment::Horizontal::from(val.0)),
+            ))
+        });
+        methods.add_function_mut("align_y", |_lua, (this, val): (Self, LuaAlignment)| {
+            Ok(LuaContainer(
+                this.0.align_y(iced::alignment::Vertical::from(val.0)),
+            ))
         });
     }
 }
@@ -215,16 +274,25 @@ impl ToolkitLua {
         )
         .exec()?;
         lua.load(
-            "function view()
-                return iced.column{
-                        iced.button('Load Game'),
-                        iced.button('New Game')
-                            :on_press('New Game'),
-                        iced.button('wtf')
-                            :on_press('Yo, wtf')
-                            :padding(10)
-                    }
-            end",
+            "
+function view()
+    return iced.container(
+        iced.container(
+            iced.column{
+                iced.button('Load Game'),
+                iced.button('New Game'):on_press('New Game'),
+            }
+            :spacing(10)
+            :padding(20)
+            :align_x( iced.Center() )
+        )
+        :align_x( iced.Center() )
+        :width( 150 )
+    )
+    --:style( iced.transparent )
+    :center( iced.Fill() )
+end
+        ",
         )
         .exec()?;
 
@@ -365,6 +433,7 @@ impl Program for ToolkitLua {
             panic!("{}", err);
         }))
         .unwrap();
+        /*
         container(
             container(
                 column![
@@ -383,5 +452,7 @@ impl Program for ToolkitLua {
         .style(container::transparent)
         .center(Fill)
         .into()
+        */
+        ele.into()
     }
 }
