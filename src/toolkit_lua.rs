@@ -178,6 +178,10 @@ impl mlua::FromLua for LuaBackground {
 lua_wrapper!(LuaShadow, iced::Shadow);
 impl mlua::UserData for LuaShadow {}
 
+// Wrapper for Palette
+lua_wrapper!(LuaPalette, iced::theme::Palette);
+impl mlua::UserData for LuaPalette {}
+
 // Wrapper for Theme
 lua_wrapper!(LuaTheme, Theme);
 impl mlua::UserData for LuaTheme {}
@@ -348,14 +352,18 @@ impl ToolkitLua {
 
         lua.load(
             "
+local PALETTE = iced.palette(
+    iced.color( 0.2, 0.2, 0.2, 1 ), -- background
+    iced.color( 0.95, 0.95, 0.95, 1 ), -- text
+    iced.color( 0.25, 0.25, 0.25, 1 ), -- primary
+    iced.color( 58.0 / 255.0, 170.0 / 255.0, 153.0 / 255.0, 1 ), -- success
+    iced.color( 204.0 / 255.0, 68.0 / 255.0, 153.0 / 255.0, 1 ) -- danger
+)
+
 function update( msg )
     print( msg )
 end
-            ",
-        )
-        .exec()?;
-        lua.load(
-            "
+
 local function window( theme )
     return iced.Container.style()
     :border( iced.border( iced.color(0,1,0,1), 1, 10 ) )
@@ -485,6 +493,29 @@ pub fn open_iced(lua: &mlua::Lua) -> mlua::Result<()> {
                     color: color.0,
                     width,
                     radius: radius.0,
+                }))
+            },
+        )?,
+    )?;
+    // Palette
+    iced.set(
+        "palette",
+        lua.create_function(
+            |_lua,
+             (background, text, primary, success, danger): (
+                LuaColor,
+                LuaColor,
+                LuaColor,
+                LuaColor,
+                LuaColor,
+            )|
+             -> mlua::Result<LuaPalette> {
+                Ok(LuaPalette(iced::theme::Palette {
+                    background: background.into(),
+                    text: text.into(),
+                    primary: primary.into(),
+                    success: success.into(),
+                    danger: danger.into(),
                 }))
             },
         )?,
