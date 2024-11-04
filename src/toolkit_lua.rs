@@ -14,6 +14,21 @@ macro_rules! lua_wrapper_min {
 }
 
 macro_rules! lua_wrapper {
+    (clone $wrapper: ident, $wrapped: ty) => {
+        lua_wrapper_min!($wrapper, $wrapped);
+        impl mlua::FromLua for $wrapper {
+            fn from_lua(value: mlua::Value, _lua: &mlua::Lua) -> mlua::Result<Self> {
+                match value {
+                    mlua::Value::UserData(ud) => Ok(Self(ud.borrow::<Self>()?.0.clone())),
+                    _ => Err(mlua::Error::FromLuaConversionError {
+                        from: value.type_name(),
+                        to: String::from(std::any::type_name::<$wrapper>()),
+                        message: None,
+                    }),
+                }
+            }
+        }
+    };
     ($wrapper: ident, $wrapped: ty) => {
         lua_wrapper_min!($wrapper, $wrapped);
         impl mlua::FromLua for $wrapper {
@@ -126,7 +141,7 @@ impl mlua::FromLua for LuaPixels {
 }
 
 // Wrapper for Color
-lua_wrapper!(LuaColor, iced::Color);
+lua_wrapper!(clone LuaColor, iced::Color);
 impl mlua::UserData for LuaColor {}
 
 // Wrapper for Border
@@ -357,9 +372,10 @@ end
         lua.load(
             "
 local function window( theme )
+    local mcolor = iced.color(0,1,0,1)
     return iced.Container.style()
-    :border( iced.border( iced.color(0,1,0,1), 1, 10 ) )
-    :background( iced.color(0,0,1,1) )
+    :border( iced.border( mcolor, 1, 10 ) )
+    :background( mcolor )
 end
 
 function view()
