@@ -497,8 +497,8 @@ end
         let globals = lua.globals();
         Ok(ToolkitLua {
             lua,
-            update: globals.get("update").unwrap(),
-            view: globals.get("view").unwrap(),
+            update: globals.get("update")?,
+            view: globals.get("view")?,
         })
     }
 }
@@ -679,7 +679,9 @@ impl iced_runtime::Program for ToolkitLua {
     type Renderer = Renderer;
 
     fn update(&mut self, message: Message) -> iced_runtime::Task<Message> {
-        self.update.call::<()>(message.0).unwrap();
+        self.update.call::<()>(message.0).unwrap_or_else(|err| {
+            panic!("{}", err);
+        });
         iced_runtime::Task::none()
     }
 
@@ -687,7 +689,9 @@ impl iced_runtime::Program for ToolkitLua {
         let ele = value_to_element(self.view.call::<mlua::Value>(()).unwrap_or_else(|err| {
             panic!("{}", err);
         }))
-        .unwrap();
+        .unwrap_or_else(|err| {
+            panic!("{}", err);
+        });
         ele.into()
     }
 }
