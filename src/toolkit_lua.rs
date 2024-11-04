@@ -554,26 +554,6 @@ impl iced_runtime::Program for ToolkitLua {
             panic!("{}", err);
         }))
         .unwrap();
-        /*
-        container(
-            container(
-                column![
-                    button("Load Game"),
-                    button("New Game").on_press(Message::new(mlua::Value::Nil)),
-                    ele,
-                ]
-                .spacing(10)
-                .padding(20)
-                .align_x(Center),
-            )
-            .style(crate::toolkit::window)
-            .align_x(Center)
-            .width(150),
-        )
-        .style(container::transparent)
-        .center(Fill)
-        .into()
-        */
         ele.into()
     }
 }
