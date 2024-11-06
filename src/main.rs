@@ -27,16 +27,13 @@ pub fn main() -> Result<(), String> {
         .window("Raw Window Handle Example", 800, 600)
         .position_centered()
         .resizable()
-        //.metal_view()
         .allow_highdpi()
-        //.opengl()
         .build()
         .map_err(|e| e.to_string())?;
     let (width, height) = window.size();
 
     let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-        //backends: wgpu::Backends::GL,
-        backends: wgpu::Backends::PRIMARY,
+        backends: wgpu::Backends::PRIMARY, //backends: wgpu::Backends::GL,
         ..Default::default()
     });
     let surface = unsafe {
@@ -85,13 +82,10 @@ pub fn main() -> Result<(), String> {
 
     let mut engine = Engine::new(&adapter, &device, &queue, format, None);
     let mut renderer = Renderer::new(&device, &engine, Font::default(), Pixels::from(16));
-    let scale_factor = 1.0; // TODO hook with SDL or something
+    let scale_factor = 1.2; // TODO hook with SDL or something
     let viewport = Viewport::with_physical_size(Size::new(width, height), scale_factor);
     let mut debug = Debug::new();
-    //let controls = MenuMain::new();
     let scene = Scene::new(&device, format);
-    // let mut state =
-    // program::State::new(controls, viewport.logical_size(), &mut renderer, &mut debug);
     let mut state = program::State::new(
         toolkit_lua::ToolkitLua::new().unwrap_or_else(|err| {
             panic!("{}", err);
@@ -121,9 +115,11 @@ pub fn main() -> Result<(), String> {
                 Event::MouseMotion { x, y, .. }
                 | Event::MouseButtonDown { x, y, .. }
                 | Event::MouseButtonUp { x, y, .. } => {
-                    cursor_position = iced_core::mouse::Cursor::Available(iced_core::Point::new(
-                        *x as f32, *y as f32,
-                    ));
+                    let s = 1.0 / scale_factor as f32;
+                    let fx = (*x as f32) * s;
+                    let fy = (*y as f32) * s;
+                    cursor_position =
+                        iced_core::mouse::Cursor::Available(iced_core::Point::new(fx, fy));
                 }
                 Event::Quit { .. }
                 | Event::KeyDown {
@@ -138,10 +134,8 @@ pub fn main() -> Result<(), String> {
             }
 
             // Map window event to iced event
-            if let Some(event) =
-                iced_sdl::window_event(&event, scale_factor, sdl_context.keyboard().mod_state())
-            {
-                state.queue_event(event);
+            if let Some(evt) = iced_sdl::window_event(&event, viewport.scale_factor()) {
+                state.queue_event(evt);
             }
         }
 
@@ -154,7 +148,6 @@ pub fn main() -> Result<(), String> {
                 viewport.logical_size(),
                 cursor_position,
                 &mut renderer,
-                //&iced_core::Theme::Dark,
                 &theme,
                 &iced_core::renderer::Style::default(),
                 &mut iced_core::clipboard::Null,
@@ -203,12 +196,7 @@ pub fn main() -> Result<(), String> {
 
         {
             // We clear the frame
-            let mut render_pass = Scene::clear(
-                &view,
-                &mut encoder,
-                //program.background_color(),
-                iced_core::Color::TRANSPARENT,
-            );
+            let mut render_pass = Scene::clear(&view, &mut encoder, iced_core::Color::BLACK);
 
             // Draw the scene
             scene.draw(&mut render_pass);

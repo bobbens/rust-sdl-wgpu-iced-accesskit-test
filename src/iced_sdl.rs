@@ -57,11 +57,7 @@ pub fn modifier(keymod: &sdl2::keyboard::Mod) -> iced::keyboard::Modifiers {
     modifiers
 }
 
-pub fn window_event(
-    event: &Event,
-    scale_factor: f64,
-    _modifiers: sdl2::keyboard::Mod,
-) -> Option<iced_core::Event> {
+pub fn window_event(event: &Event, scale_factor: f64) -> Option<iced_core::Event> {
     match event {
         Event::Window {
             //window_id,
@@ -94,11 +90,12 @@ pub fn window_event(
             iced_core::window::Event::Unfocused,
         )),
         Event::MouseMotion { x, y, .. } => {
-            let fx = (*x as f64) / scale_factor;
-            let fy = (*y as f64) / scale_factor;
+            let s = 1.0 / scale_factor as f32;
+            let fx = (*x as f32) * s;
+            let fy = (*y as f32) * s;
             Some(iced_core::Event::Mouse(
                 iced_core::mouse::Event::CursorMoved {
-                    position: iced_core::Point::new(fx as f32, fy as f32),
+                    position: iced_core::Point::new(fx, fy),
                 },
             ))
         }
