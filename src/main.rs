@@ -99,12 +99,7 @@ pub fn main() -> Result<(), String> {
                 Event::MouseMotion { x, y, .. }
                 | Event::MouseButtonDown { x, y, .. }
                 | Event::MouseButtonUp { x, y, .. } => {
-                    let s = 1.0 / scale_factor as f32;
-                    let fx = (*x as f32) * s;
-                    let fy = (*y as f32) * s;
-                    program.update_cursor_position(iced_core::mouse::Cursor::Available(
-                        iced_core::Point::new(fx, fy),
-                    ));
+                    program.update_cursor_position(*x as f32, *y as f32);
                 }
                 Event::Quit { .. }
                 | Event::KeyDown {

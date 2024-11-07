@@ -699,9 +699,9 @@ impl iced_runtime::Program for ToolkitLuaProgram {
 pub struct Toolkit<'a> {
     device: &'a wgpu::Device,
     queue: &'a wgpu::Queue,
-    pub renderer: iced_wgpu::Renderer,
-    pub viewport: iced_wgpu::graphics::Viewport,
-    pub debug: iced_runtime::Debug,
+    renderer: iced_wgpu::Renderer,
+    viewport: iced_wgpu::graphics::Viewport,
+    debug: iced_runtime::Debug,
     cursor_position: iced_core::mouse::Cursor,
     pub state: iced_runtime::program::State<ToolkitLuaProgram>,
 }
@@ -748,8 +748,10 @@ impl<'a> Toolkit<'a> {
         }
     }
 
-    pub fn update_cursor_position(&mut self, cursor_position: iced_core::mouse::Cursor) -> () {
-        self.cursor_position = cursor_position;
+    pub fn update_cursor_position(&mut self, x: f32, y: f32) -> () {
+        let s = 1.0 / self.viewport.scale_factor() as f32;
+        self.cursor_position =
+            iced_core::mouse::Cursor::Available(iced_core::Point::new(x * s, y * s));
     }
 
     pub fn update(&mut self) -> () {
