@@ -1,5 +1,5 @@
 use iced_core::Theme;
-use iced_wgpu::Renderer;
+use iced_wgpu::{wgpu, Renderer};
 
 macro_rules! lua_wrapper_min {
     ($wrapper: ident, $wrapped: ty) => {
@@ -430,14 +430,14 @@ impl mlua::UserData for LuaContainer {
 
 #[allow(dead_code)]
 #[derive(Debug)]
-pub struct ToolkitLua {
+pub struct ToolkitLuaProgram {
     lua: mlua::Lua,
     update: mlua::Function,
     view: mlua::Function,
 }
 
-impl ToolkitLua {
-    pub fn new() -> mlua::Result<ToolkitLua> {
+impl ToolkitLuaProgram {
+    pub fn new() -> mlua::Result<ToolkitLuaProgram> {
         let lua = mlua::Lua::new();
         open_iced(&lua)?;
 
@@ -495,7 +495,7 @@ end
         .exec()?;
 
         let globals = lua.globals();
-        Ok(ToolkitLua {
+        Ok(ToolkitLuaProgram {
             lua,
             update: globals.get("update")?,
             view: globals.get("view")?,
@@ -673,7 +673,7 @@ pub fn open_iced(lua: &mlua::Lua) -> mlua::Result<()> {
     Ok(())
 }
 
-impl iced_runtime::Program for ToolkitLua {
+impl iced_runtime::Program for ToolkitLuaProgram {
     type Theme = Theme;
     type Message = Message;
     type Renderer = Renderer;
@@ -693,5 +693,113 @@ impl iced_runtime::Program for ToolkitLua {
             panic!("{}", err);
         });
         ele.into()
+    }
+}
+
+pub struct Toolkit<'a> {
+    device: &'a wgpu::Device,
+    queue: &'a wgpu::Queue,
+    pub renderer: iced_wgpu::Renderer,
+    pub viewport: iced_wgpu::graphics::Viewport,
+    pub debug: iced_runtime::Debug,
+    cursor_position: iced_core::mouse::Cursor,
+    pub state: iced_runtime::program::State<ToolkitLuaProgram>,
+}
+
+impl<'a> Toolkit<'a> {
+    pub fn new(
+        engine: &mut iced_wgpu::Engine,
+        device: &'a wgpu::Device,
+        queue: &'a wgpu::Queue,
+        scale_factor: f64,
+        width: u32,
+        height: u32,
+    ) -> Toolkit<'a> {
+        let mut renderer = iced_wgpu::Renderer::new(
+            device,
+            engine,
+            iced::Font::default(),
+            iced::Pixels::from(16),
+        );
+        let viewport = iced_wgpu::graphics::Viewport::with_physical_size(
+            iced::Size::new(width, height),
+            scale_factor,
+        );
+        let mut debug = iced_runtime::Debug::new();
+        let mut state = iced_runtime::program::State::new(
+            ToolkitLuaProgram::new().unwrap_or_else(|err| {
+                panic!("{}", err);
+            }),
+            viewport.logical_size(),
+            &mut renderer,
+            &mut debug,
+        );
+        state.queue_event(iced::Event::Window(iced::window::Event::RedrawRequested(
+            std::time::Instant::now(),
+        )));
+        Toolkit {
+            device,
+            queue,
+            renderer,
+            viewport,
+            debug,
+            cursor_position: iced_core::mouse::Cursor::Unavailable,
+            state,
+        }
+    }
+
+    pub fn update_cursor_position(&mut self, cursor_position: iced_core::mouse::Cursor) -> () {
+        self.cursor_position = cursor_position;
+    }
+
+    pub fn update(&mut self) -> () {
+        if self.state.is_queue_empty() {
+            return;
+        }
+
+        let theme = crate::toolkit::theme();
+
+        // We update iced
+        let _ = self.state.update(
+            self.viewport.logical_size(),
+            self.cursor_position,
+            &mut self.renderer,
+            &theme,
+            &iced_core::renderer::Style::default(),
+            &mut iced_core::clipboard::Null,
+            &mut self.debug,
+        );
+
+        // Handle events from the app
+        //let program = state.program();
+        // match program.state {
+        //     menu_main::Message::ExitGame => {
+        //         break 'running;
+        //     }
+        //     _ => (),
+        // };
+
+        // and request a redraw
+        //window.request_redraw();
+    }
+
+    pub fn draw(
+        &mut self,
+        engine: &mut iced_wgpu::Engine,
+        view: &wgpu::TextureView,
+        encoder: &mut wgpu::CommandEncoder,
+        frame: &wgpu::SurfaceTexture,
+    ) -> () {
+        self.renderer.present(
+            engine,
+            self.device,
+            self.queue,
+            encoder,
+            None,
+            frame.texture.format(),
+            view,
+            &self.viewport,
+            &self.debug.overlay(),
+        );
     }
 }

@@ -9,10 +9,7 @@ mod toolkit_lua;
 //use menu_main::MenuMain;
 use scene::Scene;
 
-use iced::{Font, Pixels, Size};
-use iced_runtime::{program, Debug};
-use iced_wgpu::graphics::Viewport;
-use iced_wgpu::{wgpu, Engine, Renderer};
+use iced_wgpu::wgpu;
 
 use sdl2::event::{Event, WindowEvent};
 use sdl2::keyboard::Keycode;
@@ -80,25 +77,12 @@ pub fn main() -> Result<(), String> {
     };
     surface.configure(&device, &config);
 
-    let mut engine = Engine::new(&adapter, &device, &queue, format, None);
-    let mut renderer = Renderer::new(&device, &engine, Font::default(), Pixels::from(16));
     let scale_factor = 1.2; // TODO hook with SDL or something
-    let viewport = Viewport::with_physical_size(Size::new(width, height), scale_factor);
-    let mut debug = Debug::new();
     let mut scene = Scene::new(&device, &queue, format);
-    let mut state = program::State::new(
-        toolkit_lua::ToolkitLua::new().unwrap_or_else(|err| {
-            panic!("{}", err);
-        }),
-        viewport.logical_size(),
-        &mut renderer,
-        &mut debug,
-    );
-    state.queue_event(iced::Event::Window(iced::window::Event::RedrawRequested(
-        std::time::Instant::now(),
-    )));
+    let mut engine = iced_wgpu::Engine::new(&adapter, &device, &queue, format, None);
+    let mut program =
+        toolkit_lua::Toolkit::new(&mut engine, &device, &queue, scale_factor, width, height);
 
-    let mut cursor_position = iced_core::mouse::Cursor::Unavailable;
     let mut event_pump = sdl_context.event_pump()?;
     'running: loop {
         for event in event_pump.poll_iter() {
@@ -118,8 +102,9 @@ pub fn main() -> Result<(), String> {
                     let s = 1.0 / scale_factor as f32;
                     let fx = (*x as f32) * s;
                     let fy = (*y as f32) * s;
-                    cursor_position =
-                        iced_core::mouse::Cursor::Available(iced_core::Point::new(fx, fy));
+                    program.update_cursor_position(iced_core::mouse::Cursor::Available(
+                        iced_core::Point::new(fx, fy),
+                    ));
                 }
                 Event::Quit { .. }
                 | Event::KeyDown {
@@ -134,38 +119,12 @@ pub fn main() -> Result<(), String> {
             }
 
             // Map window event to iced event
-            if let Some(evt) = iced_sdl::window_event(&event, viewport.scale_factor()) {
-                state.queue_event(evt);
+            if let Some(evt) = iced_sdl::window_event(&event, scale_factor) {
+                program.state.queue_event(evt);
             }
         }
 
-        let theme = toolkit::theme();
-
-        // If there are events pending
-        if !state.is_queue_empty() {
-            // We update iced
-            let _ = state.update(
-                viewport.logical_size(),
-                cursor_position,
-                &mut renderer,
-                &theme,
-                &iced_core::renderer::Style::default(),
-                &mut iced_core::clipboard::Null,
-                &mut debug,
-            );
-
-            // Handle events from the app
-            //let program = state.program();
-            // match program.state {
-            //     menu_main::Message::ExitGame => {
-            //         break 'running;
-            //     }
-            //     _ => (),
-            // };
-
-            // and request a redraw
-            //window.request_redraw();
-        }
+        program.update();
 
         let frame = match surface.get_current_texture() {
             Ok(frame) => frame,
@@ -201,17 +160,7 @@ pub fn main() -> Result<(), String> {
             // Draw the scene
             scene.draw(&mut render_pass);
         }
-        renderer.present(
-            &mut engine,
-            &device,
-            &queue,
-            &mut encoder,
-            None,
-            frame.texture.format(),
-            &view,
-            &viewport,
-            &debug.overlay(),
-        );
+        program.draw(&mut engine, &view, &mut encoder, &frame);
         engine.submit(&queue, encoder);
         frame.present();
 
