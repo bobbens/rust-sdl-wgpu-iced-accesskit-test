@@ -10,6 +10,7 @@ iced_wgpu = { git = "https://github.com/iced-rs/iced" }
 iced_runtime = { git = "https://github.com/iced-rs/iced" }
 iced_core = { git = "https://github.com/iced-rs/iced" }
 iced_widget = { git = "https://github.com/iced-rs/iced" }
+wgpu = { version = "23", features = ["glsl"] }
 console_error_panic_hook = "0"
 console_log = "1.0"
 sdl2 = { version = "0", features = ["raw-window-handle"] }
@@ -17,3 +18,4 @@ pollster = "0"
 env_logger = "0"
 raw-window-handle = "0.6.0"
 mlua = { version = "0", features = ["luajit", "send"] }
+encase = "0"

@@ -85,7 +85,7 @@ pub fn main() -> Result<(), String> {
     let scale_factor = 1.2; // TODO hook with SDL or something
     let viewport = Viewport::with_physical_size(Size::new(width, height), scale_factor);
     let mut debug = Debug::new();
-    let scene = Scene::new(&device, format);
+    let mut scene = Scene::new(&device, &queue, format);
     let mut state = program::State::new(
         toolkit_lua::ToolkitLua::new().unwrap_or_else(|err| {
             panic!("{}", err);
@@ -196,7 +196,7 @@ pub fn main() -> Result<(), String> {
 
         {
             // We clear the frame
-            let mut render_pass = Scene::clear(&view, &mut encoder, iced_core::Color::BLACK);
+            let mut render_pass = scene.clear(&view, &mut encoder, iced_core::Color::BLACK);
 
             // Draw the scene
             scene.draw(&mut render_pass);
@@ -214,6 +214,8 @@ pub fn main() -> Result<(), String> {
         );
         engine.submit(&queue, encoder);
         frame.present();
+
+        scene.update(0.01);
     }
 
     Ok(())
