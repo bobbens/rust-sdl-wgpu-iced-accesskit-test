@@ -1,3 +1,4 @@
+use crate::toolkit;
 use crate::toolkit::Message;
 use iced_core::Theme;
 use iced_wgpu::Renderer;
@@ -431,14 +432,14 @@ impl mlua::UserData for LuaContainer {
 
 #[allow(dead_code)]
 #[derive(Debug)]
-pub struct ToolkitProgramLua {
+pub struct ToolkitWindowLua {
     lua: mlua::Lua,
     update: mlua::Function,
     view: mlua::Function,
 }
 
-impl ToolkitProgramLua {
-    pub fn new() -> mlua::Result<ToolkitProgramLua> {
+impl ToolkitWindowLua {
+    pub fn new() -> mlua::Result<ToolkitWindowLua> {
         let lua = mlua::Lua::new();
         open_iced(&lua)?;
 
@@ -496,7 +497,7 @@ end
         .exec()?;
 
         let globals = lua.globals();
-        Ok(ToolkitProgramLua {
+        Ok(ToolkitWindowLua {
             lua,
             update: globals.get("update")?,
             view: globals.get("view")?,
@@ -674,11 +675,7 @@ pub fn open_iced(lua: &mlua::Lua) -> mlua::Result<()> {
     Ok(())
 }
 
-impl iced_runtime::Program for ToolkitProgramLua {
-    type Theme = Theme;
-    type Message = Message;
-    type Renderer = Renderer;
-
+impl toolkit::Window for ToolkitWindowLua {
     fn update(&mut self, message: Message) -> iced_runtime::Task<Message> {
         match message {
             Message::Lua(m) => {

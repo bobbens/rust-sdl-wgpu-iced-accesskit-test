@@ -78,16 +78,17 @@ pub fn main() -> Result<(), String> {
     let scale_factor = 1.2; // TODO hook with SDL or something
     let mut scene = Scene::new(&device, &queue, format);
     let mut engine = iced_wgpu::Engine::new(&adapter, &device, &queue, format, None);
-    let mut program =
+    let mut toolkit =
         toolkit::Toolkit::new(&mut engine, &device, &queue, scale_factor, width, height);
 
     /*
-    program.open( toolkit_lua::ToolkitProgram::Lua( toolkit_lua::ToolkitProgramLua::new().unwrap_or_else(|err| {
+    program.open( toolkit_lua::ToolkitWindow::Lua( toolkit_lua::ToolkitWindowLua::new().unwrap_or_else(|err| {
         panic!("{}", err);
     })));
     */
 
-    program.open(toolkit::ToolkitProgram::MenuMain(menu_main::MenuMain::new()));
+    //program.open(toolkit::ToolkitWindow::MenuMain(menu_main::MenuMain::new()));
+    toolkit.queue_message(toolkit::Message::OpenMenuMain);
 
     let mut event_pump = sdl_context.event_pump()?;
     'running: loop {
@@ -105,7 +106,7 @@ pub fn main() -> Result<(), String> {
                 Event::MouseMotion { x, y, .. }
                 | Event::MouseButtonDown { x, y, .. }
                 | Event::MouseButtonUp { x, y, .. } => {
-                    program.update_cursor_position(*x as f32, *y as f32);
+                    toolkit.update_cursor_position(*x as f32, *y as f32);
                 }
                 Event::Quit { .. }
                 | Event::KeyDown {
@@ -121,11 +122,11 @@ pub fn main() -> Result<(), String> {
 
             // Map window event to iced event
             if let Some(evt) = iced_sdl::window_event(&event, scale_factor) {
-                program.queue_event(evt);
+                toolkit.queue_event(evt);
             }
         }
 
-        program.update();
+        toolkit.update();
 
         let frame = match surface.get_current_texture() {
             Ok(frame) => frame,
@@ -161,7 +162,7 @@ pub fn main() -> Result<(), String> {
             // Draw the scene
             scene.draw(&mut render_pass);
         }
-        program.draw(&mut engine, &view, &mut encoder, &frame);
+        toolkit.draw(&mut engine, &view, &mut encoder, &frame);
         engine.submit(&queue, encoder);
         frame.present();
 

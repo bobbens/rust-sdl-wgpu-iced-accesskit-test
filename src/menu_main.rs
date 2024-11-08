@@ -1,4 +1,4 @@
-//use crate::toolkit;
+use crate::toolkit;
 use crate::toolkit::Message as MessageBase;
 use iced::{Center, Fill};
 use iced_core::{Element, Theme};
@@ -29,16 +29,12 @@ impl MenuMain {
     }
 }
 
-impl Program for MenuMain {
-    type Theme = Theme;
-    type Message = MessageBase;
-    type Renderer = Renderer;
-
+impl toolkit::Window for MenuMain {
     fn update(&mut self, message: MessageBase) -> Task<MessageBase> {
         match message {
             MessageBase::MenuMain(m) => {
                 self.state = m;
-                //self.program.open( toolkit_lua::ToolkitProgram::Lua( toolkit_lua::ToolkitProgramLua::new().unwrap_or_else(|err| {
+                //self.program.open( toolkit_lua::ToolkitWindow::Lua( toolkit_lua::ToolkitWindowLua::new().unwrap_or_else(|err| {
                 //    panic!("{}", err);
                 //})));
             }
