@@ -35,12 +35,6 @@ fn generate(_palette: Palette) -> Extended {
     }
 }
 
-pub fn theme() -> iced::theme::Theme {
-    //iced::theme::Theme::custom_with_fn(String::from("Naev"), PALETTE, generate )
-    iced::theme::Theme::custom(String::from("Naev"), PALETTE)
-}
-
-#[allow(dead_code)]
 pub fn window(theme: &Theme) -> Style {
     let palext = theme.extended_palette();
     let palette = theme.palette();
@@ -104,6 +98,38 @@ impl ToolkitProgram {
             windows: Vec::new(),
         }
     }
+
+    pub fn window_update(&mut self, message: Message) -> () {
+        window_message(&mut self.windows, message, true)
+    }
+}
+
+fn window_message(windows: &mut Vec<ToolkitWindow>, message: Message, recurse: bool) -> () {
+    match message {
+        Message::CloseWindow => {
+            windows.pop();
+        }
+        Message::OpenMenuMain => {
+            windows.push(ToolkitWindow::MenuMain(crate::menu_main::MenuMain::new()));
+        }
+        Message::OpenLua => {
+            windows.push(ToolkitWindow::Lua(
+                crate::toolkit_lua::ToolkitWindowLua::new().unwrap_or_else(|err| {
+                    panic!("{}", err);
+                }),
+            ));
+        }
+        _ => {
+            if recurse {
+                if let Some(wdw) = windows.last_mut() {
+                    match wdw.update(message) {
+                        Message::None => (),
+                        msg => window_message(windows, msg, false),
+                    }
+                }
+            }
+        }
+    }
 }
 
 impl iced_runtime::Program for ToolkitProgram {
@@ -112,43 +138,7 @@ impl iced_runtime::Program for ToolkitProgram {
     type Renderer = Renderer;
 
     fn update(&mut self, message: Message) -> Task<Message> {
-        match message {
-            Message::CloseWindow => {
-                self.windows.pop();
-            }
-            Message::OpenMenuMain => {
-                self.windows
-                    .push(ToolkitWindow::MenuMain(crate::menu_main::MenuMain::new()));
-            }
-            Message::OpenLua => {
-                self.windows.push(ToolkitWindow::Lua(
-                    crate::toolkit_lua::ToolkitWindowLua::new().unwrap_or_else(|err| {
-                        panic!("{}", err);
-                    }),
-                ));
-            }
-            _ => {
-                if let Some(wdw) = self.windows.last_mut() {
-                    match wdw.update(message) {
-                        Message::OpenMenuMain => {
-                            self.windows
-                                .push(ToolkitWindow::MenuMain(crate::menu_main::MenuMain::new()));
-                        }
-                        Message::OpenLua => {
-                            self.windows.push(ToolkitWindow::Lua(
-                                crate::toolkit_lua::ToolkitWindowLua::new().unwrap_or_else(|err| {
-                                    panic!("{}", err);
-                                }),
-                            ));
-                        }
-                        Message::CloseWindow => {
-                            self.windows.pop();
-                        }
-                        _ => (),
-                    }
-                }
-            }
-        };
+        self.window_update(message);
         iced_runtime::Task::none()
     }
 
