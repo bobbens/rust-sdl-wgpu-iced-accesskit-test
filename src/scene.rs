@@ -122,7 +122,7 @@ impl<'a> Scene<'a> {
         }
     }
 
-    pub fn update(&mut self, dt: f32) -> () {
+    pub fn update(&mut self, dt: f32) {
         self.context.time += dt;
     }
 

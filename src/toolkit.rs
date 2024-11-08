@@ -99,12 +99,12 @@ impl ToolkitProgram {
         }
     }
 
-    pub fn window_update(&mut self, message: Message) -> () {
+    pub fn window_update(&mut self, message: Message) {
         window_message(&mut self.windows, message, true)
     }
 }
 
-fn window_message(windows: &mut Vec<ToolkitWindow>, message: Message, recurse: bool) -> () {
+fn window_message(windows: &mut Vec<ToolkitWindow>, message: Message, recurse: bool) {
     match message {
         Message::CloseWindow => {
             windows.pop();
@@ -144,7 +144,7 @@ impl iced_runtime::Program for ToolkitProgram {
 
     fn view(&self) -> Element<'_, Message, Theme, Renderer> {
         let ele: Vec<Element<'_, Message, Theme, Renderer>> =
-            self.windows.iter().map(|w| w.view().into()).collect();
+            self.windows.iter().map(|w| w.view()).collect();
         iced_widget::Stack::with_children(ele).into()
     }
 }
@@ -201,17 +201,17 @@ impl<'a> Toolkit<'a> {
         }
     }
 
-    pub fn update_cursor_position(&mut self, x: f32, y: f32) -> () {
+    pub fn update_cursor_position(&mut self, x: f32, y: f32) {
         let s = 1.0 / self.viewport.scale_factor() as f32;
         self.cursor_position =
             iced_core::mouse::Cursor::Available(iced_core::Point::new(x * s, y * s));
     }
 
-    pub fn queue_event(&mut self, event: iced_core::Event) -> () {
+    pub fn queue_event(&mut self, event: iced_core::Event) {
         self.state.queue_event(event)
     }
 
-    pub fn queue_message(&mut self, message: Message) -> () {
+    pub fn queue_message(&mut self, message: Message) {
         self.state.queue_message(message)
     }
 
@@ -220,7 +220,7 @@ impl<'a> Toolkit<'a> {
     //    self.state.program().windows.push( program );
     //}
 
-    pub fn update(&mut self) -> () {
+    pub fn update(&mut self) {
         // We update iced
         let _ = self.state.update(
             self.viewport.logical_size(),
@@ -278,7 +278,7 @@ impl<'a> Toolkit<'a> {
         view: &wgpu::TextureView,
         encoder: &mut wgpu::CommandEncoder,
         frame: &wgpu::SurfaceTexture,
-    ) -> () {
+    ) {
         self.renderer.present(
             engine,
             self.device,

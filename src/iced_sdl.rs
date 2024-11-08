@@ -17,14 +17,14 @@ pub fn key(keycode: &sdl2::keyboard::Keycode) -> iced::keyboard::key::Key {
     use iced_core::SmolStr;
     use sdl2::keyboard::Keycode;
 
-    match keycode {
-        &Keycode::A => Character(SmolStr::new("a")),
-        &Keycode::BACKSPACE => Named(NamedKey::Backspace),
-        &Keycode::TAB => Named(NamedKey::Tab),
-        &Keycode::RETURN => Named(NamedKey::Enter),
-        &Keycode::ESCAPE => Named(NamedKey::Escape),
-        &Keycode::SPACE => Named(NamedKey::Space),
-        _ => return iced::keyboard::Key::Unidentified,
+    match *keycode {
+        Keycode::A => Character(SmolStr::new("a")),
+        Keycode::BACKSPACE => Named(NamedKey::Backspace),
+        Keycode::TAB => Named(NamedKey::Tab),
+        Keycode::RETURN => Named(NamedKey::Enter),
+        Keycode::ESCAPE => Named(NamedKey::Escape),
+        Keycode::SPACE => Named(NamedKey::Space),
+        _ => iced::keyboard::Key::Unidentified,
     }
 }
 

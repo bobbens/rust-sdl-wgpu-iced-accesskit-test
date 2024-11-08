@@ -84,7 +84,7 @@ impl mlua::FromLua for LuaLength {
         match value {
             mlua::Value::Integer(n) => Ok(LuaLength(iced::Length::Fixed(n as f32))),
             mlua::Value::Number(n) => Ok(LuaLength(iced::Length::Fixed(n as f32))),
-            mlua::Value::UserData(ud) => Ok(Self(ud.borrow::<Self>()?.0.clone())),
+            mlua::Value::UserData(ud) => Ok(Self(ud.borrow::<Self>()?.0)),
             _ => Err(mlua::Error::FromLuaConversionError {
                 from: value.type_name(),
                 to: String::from("LuaLength"),
@@ -102,7 +102,7 @@ impl mlua::FromLua for LuaPadding {
         match value {
             mlua::Value::Integer(n) => Ok(LuaPadding(iced::Padding::new(n as f32))),
             mlua::Value::Number(n) => Ok(LuaPadding(iced::Padding::new(n as f32))),
-            mlua::Value::UserData(ud) => Ok(Self(ud.borrow::<Self>()?.0.clone())),
+            mlua::Value::UserData(ud) => Ok(Self(ud.borrow::<Self>()?.0)),
             _ => Err(mlua::Error::FromLuaConversionError {
                 from: value.type_name(),
                 to: String::from("LuaPadding"),
@@ -132,7 +132,7 @@ impl mlua::FromLua for LuaPixels {
         match value {
             mlua::Value::Integer(n) => Ok(LuaPixels(iced::Pixels(n as f32))),
             mlua::Value::Number(n) => Ok(LuaPixels(iced::Pixels(n as f32))),
-            mlua::Value::UserData(ud) => Ok(Self(ud.borrow::<Self>()?.0.clone())),
+            mlua::Value::UserData(ud) => Ok(Self(ud.borrow::<Self>()?.0)),
             _ => Err(mlua::Error::FromLuaConversionError {
                 from: value.type_name(),
                 to: String::from("LuaPixels"),
@@ -158,7 +158,7 @@ impl mlua::FromLua for LuaRadius {
         match value {
             mlua::Value::Integer(n) => Ok(LuaRadius((n as f32).into())),
             mlua::Value::Number(n) => Ok(LuaRadius((n as f32).into())),
-            mlua::Value::UserData(ud) => Ok(Self(ud.borrow::<Self>()?.0.clone())),
+            mlua::Value::UserData(ud) => Ok(Self(ud.borrow::<Self>()?.0)),
             _ => Err(mlua::Error::FromLuaConversionError {
                 from: value.type_name(),
                 to: String::from("LuaRadius"),
@@ -208,7 +208,7 @@ impl mlua::UserData for LuaPalette {
     fn add_methods<M: mlua::UserDataMethods<Self>>(methods: &mut M) {
         methods.add_function_mut("generate", |_lua, this: Self| {
             Ok(LuaExtended(iced::theme::palette::Extended::generate(
-                this.0.clone(),
+                this.0,
             )))
         });
     }
@@ -274,7 +274,7 @@ impl mlua::UserData for LuaTheme {
             Ok(LuaPalette(this.0.palette()))
         });
         methods.add_function_mut("extended_palette", |_lua, this: Self| {
-            Ok(LuaExtended(this.0.extended_palette().clone()))
+            Ok(LuaExtended(*this.0.extended_palette()))
         });
     }
 }
@@ -632,9 +632,7 @@ pub fn open_iced(lua: &mlua::Lua) -> mlua::Result<()> {
     iced.set(
         "container",
         lua.create_function(|_lua, val: mlua::Value| -> mlua::Result<LuaContainer> {
-            Ok(LuaContainer(
-                iced_widget::container(value_to_element(val)?).into(),
-            ))
+            Ok(LuaContainer(iced_widget::container(value_to_element(val)?)))
         })?,
     )?;
     let container = lua.create_table()?;
@@ -669,9 +667,7 @@ pub fn open_iced(lua: &mlua::Lua) -> mlua::Result<()> {
     iced.set(
         "button",
         lua.create_function(|_lua, val: mlua::Value| -> mlua::Result<LuaButton> {
-            Ok(LuaButton(
-                iced_widget::button(value_to_element(val)?).into(),
-            ))
+            Ok(LuaButton(iced_widget::button(value_to_element(val)?)))
         })?,
     )?;
     globals.set("iced", iced)?;
@@ -695,12 +691,11 @@ impl toolkit::Window for ToolkitWindowLua {
     }
 
     fn view(&self) -> iced_core::Element<Message, Theme, Renderer> {
-        let ele = value_to_element(self.view.call::<mlua::Value>(()).unwrap_or_else(|err| {
+        value_to_element(self.view.call::<mlua::Value>(()).unwrap_or_else(|err| {
             panic!("{}", err);
         }))
         .unwrap_or_else(|err| {
             panic!("{}", err);
-        });
-        ele.into()
+        })
     }
 }
