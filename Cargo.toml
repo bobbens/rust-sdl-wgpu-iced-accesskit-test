@@ -5,7 +5,7 @@ edition = "2021"
 publish = false
 
 [dependencies]
-iced = { git = "https://github.com/iced-rs/iced" }
+iced = { git = "https://github.com/iced-rs/iced", features=["advanced"] }
 iced_wgpu = { git = "https://github.com/iced-rs/iced" }
 iced_runtime = { git = "https://github.com/iced-rs/iced" }
 iced_core = { git = "https://github.com/iced-rs/iced" }
