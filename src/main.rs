@@ -79,7 +79,7 @@ pub fn main() -> Result<(), String> {
     let mut scene = Scene::new(&device, &queue, format);
     let mut engine = iced_wgpu::Engine::new(&adapter, &device, &queue, format, None);
     let mut program =
-        toolkit_lua::Toolkit::new(&mut engine, &device, &queue, scale_factor, width, height);
+        toolkit::Toolkit::new(&mut engine, &device, &queue, scale_factor, width, height);
 
     /*
     program.open( toolkit_lua::ToolkitProgram::Lua( toolkit_lua::ToolkitProgramLua::new().unwrap_or_else(|err| {
@@ -87,8 +87,7 @@ pub fn main() -> Result<(), String> {
     })));
     */
 
-    let menumain = menu_main::MenuMain::new();
-    program.open(toolkit_lua::ToolkitProgram::MenuMain(menumain));
+    program.open(toolkit::ToolkitProgram::MenuMain(menu_main::MenuMain::new()));
 
     let mut event_pump = sdl_context.event_pump()?;
     'running: loop {
@@ -127,15 +126,6 @@ pub fn main() -> Result<(), String> {
         }
 
         program.update();
-
-        /*
-        match menumain.state {
-            menu_main::Message::NewGame => {
-                ()
-            },
-            _ => (),
-        };
-        */
 
         let frame = match surface.get_current_texture() {
             Ok(frame) => frame,
