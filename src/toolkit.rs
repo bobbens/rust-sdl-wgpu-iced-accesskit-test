@@ -128,12 +128,9 @@ impl iced_runtime::Program for ToolkitProgram {
     }
 
     fn view(&self) -> Element<'_, Message, Theme, Renderer> {
-        //iced_widget::stack!( self.windows.iter().map( |&w| {w.view()} ).collect() ).into()
-        if let Some(ele) = self.windows.last() {
-            ele.view().into()
-        } else {
-            iced_widget::text("").into()
-        }
+        let ele: Vec<Element<'_, Message, Theme, Renderer>> =
+            self.windows.iter().map(|w| w.view().into()).collect();
+        iced_widget::Stack::with_children(ele).into()
     }
 }
 
