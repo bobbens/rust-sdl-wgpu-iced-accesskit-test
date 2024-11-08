@@ -430,14 +430,14 @@ impl mlua::UserData for LuaContainer {
 
 #[allow(dead_code)]
 #[derive(Debug)]
-pub struct ToolkitLuaProgram {
+pub struct ToolkitProgramLua {
     lua: mlua::Lua,
     update: mlua::Function,
     view: mlua::Function,
 }
 
-impl ToolkitLuaProgram {
-    pub fn new() -> mlua::Result<ToolkitLuaProgram> {
+impl ToolkitProgramLua {
+    pub fn new() -> mlua::Result<ToolkitProgramLua> {
         let lua = mlua::Lua::new();
         open_iced(&lua)?;
 
@@ -495,7 +495,7 @@ end
         .exec()?;
 
         let globals = lua.globals();
-        Ok(ToolkitLuaProgram {
+        Ok(ToolkitProgramLua {
             lua,
             update: globals.get("update")?,
             view: globals.get("view")?,
@@ -673,7 +673,7 @@ pub fn open_iced(lua: &mlua::Lua) -> mlua::Result<()> {
     Ok(())
 }
 
-impl iced_runtime::Program for ToolkitLuaProgram {
+impl iced_runtime::Program for ToolkitProgramLua {
     type Theme = Theme;
     type Message = Message;
     type Renderer = Renderer;
@@ -703,7 +703,8 @@ pub struct Toolkit<'a> {
     viewport: iced_wgpu::graphics::Viewport,
     debug: iced_runtime::Debug,
     cursor_position: iced_core::mouse::Cursor,
-    pub state: iced_runtime::program::State<ToolkitLuaProgram>,
+    //pub state: Vec<Box<iced_runtime::program::State<dyn iced_runtime::Program>>>,
+    pub state: Vec<iced_runtime::program::State<ToolkitProgramLua>>,
 }
 
 impl<'a> Toolkit<'a> {
@@ -727,7 +728,7 @@ impl<'a> Toolkit<'a> {
         );
         let mut debug = iced_runtime::Debug::new();
         let mut state = iced_runtime::program::State::new(
-            ToolkitLuaProgram::new().unwrap_or_else(|err| {
+            ToolkitProgramLua::new().unwrap_or_else(|err| {
                 panic!("{}", err);
             }),
             viewport.logical_size(),
@@ -744,7 +745,7 @@ impl<'a> Toolkit<'a> {
             viewport,
             debug,
             cursor_position: iced_core::mouse::Cursor::Unavailable,
-            state,
+            state: Vec::new(),
         }
     }
 
@@ -754,15 +755,32 @@ impl<'a> Toolkit<'a> {
             iced_core::mouse::Cursor::Available(iced_core::Point::new(x * s, y * s));
     }
 
+    pub fn queue_event(&mut self, event: iced_core::Event) -> () {
+        match self.state.last_mut() {
+            Some(state) => {
+                state.queue_event(event);
+            }
+            _ => {
+                return;
+            }
+        };
+    }
+
     pub fn update(&mut self) -> () {
-        if self.state.is_queue_empty() {
+        let state = match self.state.last_mut() {
+            Some(state) => state,
+            _ => {
+                return;
+            }
+        };
+
+        if state.is_queue_empty() {
             return;
         }
-
         let theme = crate::toolkit::theme();
 
         // We update iced
-        let _ = self.state.update(
+        let _ = state.update(
             self.viewport.logical_size(),
             self.cursor_position,
             &mut self.renderer,
@@ -803,5 +821,16 @@ impl<'a> Toolkit<'a> {
             &self.viewport,
             &self.debug.overlay(),
         );
+    }
+
+    //pub fn open ( &mut self, program: impl iced_runtime::Program<Renderer = iced_wgpu::Renderer> + 'static ) -> () {
+    pub fn open(&mut self, program: ToolkitProgramLua) -> () {
+        let state = iced_runtime::program::State::new(
+            program,
+            self.viewport.logical_size(),
+            &mut self.renderer,
+            &mut self.debug,
+        );
+        self.state.push(state);
     }
 }

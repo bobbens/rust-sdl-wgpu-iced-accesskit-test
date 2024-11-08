@@ -5,8 +5,6 @@ mod scene;
 mod toolkit;
 mod toolkit_lua;
 
-//use controls::Controls;
-//use menu_main::MenuMain;
 use scene::Scene;
 
 use iced_wgpu::wgpu;
@@ -83,6 +81,10 @@ pub fn main() -> Result<(), String> {
     let mut program =
         toolkit_lua::Toolkit::new(&mut engine, &device, &queue, scale_factor, width, height);
 
+    program.open(toolkit_lua::ToolkitProgramLua::new().unwrap_or_else(|err| {
+        panic!("{}", err);
+    }));
+
     let mut event_pump = sdl_context.event_pump()?;
     'running: loop {
         for event in event_pump.poll_iter() {
@@ -115,7 +117,7 @@ pub fn main() -> Result<(), String> {
 
             // Map window event to iced event
             if let Some(evt) = iced_sdl::window_event(&event, scale_factor) {
-                program.state.queue_event(evt);
+                program.queue_event(evt);
             }
         }
 
