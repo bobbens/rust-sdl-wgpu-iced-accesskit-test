@@ -460,6 +460,9 @@ end
 
 function update( msg )
     print( msg )
+    if msg=='Exit Game' then
+        return true
+    end
 end
 
 local function window( theme )
@@ -679,9 +682,12 @@ impl toolkit::Window for ToolkitWindowLua {
     fn update(&mut self, message: Message) -> Message {
         match message {
             Message::Lua(m) => {
-                self.update.call::<()>(m.0).unwrap_or_else(|err| {
+                let finish = self.update.call::<bool>(m.0).unwrap_or_else(|err| {
                     panic!("{}", err);
                 });
+                if finish {
+                    return Message::CloseWindow;
+                }
             }
             _ => unreachable!(),
         }
