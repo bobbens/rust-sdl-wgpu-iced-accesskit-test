@@ -74,14 +74,16 @@ impl iced_runtime::Program for ToolkitProgram {
     fn update(&mut self, message: Message) -> iced_runtime::Task<Message> {
         match self {
             ToolkitProgram::Lua(state) => state.update(message),
-            _ => iced_runtime::Task::none(),
+            ToolkitProgram::MenuMain(state) => state.update(message),
+            //_ => iced_runtime::Task::none(),
         }
     }
 
     fn view(&self) -> iced_core::Element<Message, Theme, Renderer> {
         match self {
             ToolkitProgram::Lua(state) => state.view(),
-            _ => iced_widget::text("").into(),
+            ToolkitProgram::MenuMain(state) => state.view(),
+            //_ => iced_widget::text("").into(),
         }
     }
 }
