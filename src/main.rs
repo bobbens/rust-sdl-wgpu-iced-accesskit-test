@@ -81,11 +81,14 @@ pub fn main() -> Result<(), String> {
     let mut program =
         toolkit_lua::Toolkit::new(&mut engine, &device, &queue, scale_factor, width, height);
 
-    program.open(toolkit_lua::ToolkitProgram::Lua(
-        toolkit_lua::ToolkitProgramLua::new().unwrap_or_else(|err| {
-            panic!("{}", err);
-        }),
-    ));
+    /*
+    program.open( toolkit_lua::ToolkitProgram::Lua( toolkit_lua::ToolkitProgramLua::new().unwrap_or_else(|err| {
+        panic!("{}", err);
+    })));
+    */
+
+    let menumain = menu_main::MenuMain::new();
+    program.open(toolkit_lua::ToolkitProgram::MenuMain(menumain));
 
     let mut event_pump = sdl_context.event_pump()?;
     'running: loop {
@@ -124,6 +127,15 @@ pub fn main() -> Result<(), String> {
         }
 
         program.update();
+
+        /*
+        match menumain.state {
+            menu_main::Message::NewGame => {
+                ()
+            },
+            _ => (),
+        };
+        */
 
         let frame = match surface.get_current_texture() {
             Ok(frame) => frame,

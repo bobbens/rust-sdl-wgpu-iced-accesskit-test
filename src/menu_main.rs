@@ -1,10 +1,11 @@
+use crate::toolkit_lua;
+use crate::toolkit_lua::Message as MessageBase;
 use iced::{Center, Fill};
 use iced_core::{Element, Theme};
 use iced_runtime::{Program, Task};
 use iced_wgpu::Renderer;
 use iced_widget::{button, column, container};
 
-#[derive(Debug)]
 pub struct MenuMain {
     pub state: Message,
 }
@@ -30,24 +31,32 @@ impl MenuMain {
 
 impl Program for MenuMain {
     type Theme = Theme;
-    type Message = Message;
+    type Message = MessageBase;
     type Renderer = Renderer;
 
-    fn update(&mut self, message: Message) -> Task<Message> {
-        self.state = message;
+    fn update(&mut self, message: MessageBase) -> Task<MessageBase> {
+        match message {
+            MessageBase::MenuMain(m) => {
+                self.state = m;
+                //self.program.open( toolkit_lua::ToolkitProgram::Lua( toolkit_lua::ToolkitProgramLua::new().unwrap_or_else(|err| {
+                //    panic!("{}", err);
+                //})));
+            }
+            _ => unreachable!(),
+        };
         Task::none()
     }
 
-    fn view(&self) -> Element<Message, Theme, Renderer> {
+    fn view(&self) -> Element<MessageBase, Theme, Renderer> {
         container(
             container(
                 column![
                     button("Load Game"),
-                    button("New Game").on_press(Message::NewGame),
-                    button("Editors").on_press(Message::Editors),
-                    button("Options").on_press(Message::Options),
-                    button("Credits").on_press(Message::Credits),
-                    button("Exit Game").on_press(Message::ExitGame),
+                    button("New Game").on_press(MessageBase::MenuMain(Message::NewGame)),
+                    //button("Editors").on_press(Message::Editors),
+                    //button("Options").on_press(Message::Options),
+                    //button("Credits").on_press(Message::Credits),
+                    //button("Exit Game").on_press(Message::ExitGame),
                 ]
                 .spacing(10)
                 .padding(20)
