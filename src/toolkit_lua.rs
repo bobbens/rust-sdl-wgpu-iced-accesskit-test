@@ -70,9 +70,9 @@ macro_rules! impl_fromlua_for {
 }
 
 #[derive(Debug, Clone)]
-pub struct Message(mlua::Value);
-impl mlua::UserData for Message {}
-impl_fromlua_for!(Message);
+pub struct MessageLua(mlua::Value);
+impl mlua::UserData for MessageLua {}
+impl_fromlua_for!(MessageLua);
 
 // Wrapper for Length
 lua_wrapper_min!(LuaLength, iced::Length);
@@ -309,7 +309,7 @@ lua_wrapper!(
 impl mlua::UserData for LuaButton {
     fn add_methods<M: mlua::UserDataMethods<Self>>(methods: &mut M) {
         methods.add_function_mut("on_press", |_lua, (this, val): (Self, mlua::Value)| {
-            Ok(LuaButton(this.0.on_press(Message(val))))
+            Ok(LuaButton(this.0.on_press(Message::Lua(MessageLua(val)))))
         });
         methods.add_function_mut("width", |_lua, (this, val): (Self, LuaLength)| {
             Ok(LuaButton(this.0.width(val)))
@@ -679,9 +679,14 @@ impl iced_runtime::Program for ToolkitProgramLua {
     type Renderer = Renderer;
 
     fn update(&mut self, message: Message) -> iced_runtime::Task<Message> {
-        self.update.call::<()>(message.0).unwrap_or_else(|err| {
-            panic!("{}", err);
-        });
+        match message {
+            Message::Lua(m) => {
+                self.update.call::<()>(m.0).unwrap_or_else(|err| {
+                    panic!("{}", err);
+                });
+            }
+            _ => unreachable!(),
+        }
         iced_runtime::Task::none()
     }
 
@@ -696,6 +701,37 @@ impl iced_runtime::Program for ToolkitProgramLua {
     }
 }
 
+pub enum ToolkitProgram {
+    Lua(ToolkitProgramLua),
+    MenuMain(crate::menu_main::MenuMain),
+}
+
+#[derive(Debug, Clone)]
+pub enum Message {
+    Lua(MessageLua),
+    MenuMain(crate::menu_main::Message),
+}
+
+impl iced_runtime::Program for ToolkitProgram {
+    type Theme = Theme;
+    type Message = Message;
+    type Renderer = Renderer;
+
+    fn update(&mut self, message: Message) -> iced_runtime::Task<Message> {
+        match self {
+            ToolkitProgram::Lua(state) => state.update(message),
+            _ => iced_runtime::Task::none(),
+        }
+    }
+
+    fn view(&self) -> iced_core::Element<Message, Theme, Renderer> {
+        match self {
+            ToolkitProgram::Lua(state) => state.view(),
+            _ => iced_widget::text("").into(),
+        }
+    }
+}
+
 pub struct Toolkit<'a> {
     device: &'a wgpu::Device,
     queue: &'a wgpu::Queue,
@@ -704,7 +740,7 @@ pub struct Toolkit<'a> {
     debug: iced_runtime::Debug,
     cursor_position: iced_core::mouse::Cursor,
     //pub state: Vec<Box<iced_runtime::program::State<dyn iced_runtime::Program>>>,
-    pub state: Vec<iced_runtime::program::State<ToolkitProgramLua>>,
+    pub state: Vec<iced_runtime::program::State<ToolkitProgram>>,
 }
 
 impl<'a> Toolkit<'a> {
@@ -824,7 +860,7 @@ impl<'a> Toolkit<'a> {
     }
 
     //pub fn open ( &mut self, program: impl iced_runtime::Program<Renderer = iced_wgpu::Renderer> + 'static ) -> () {
-    pub fn open(&mut self, program: ToolkitProgramLua) -> () {
+    pub fn open(&mut self, program: ToolkitProgram) -> () {
         let state = iced_runtime::program::State::new(
             program,
             self.viewport.logical_size(),

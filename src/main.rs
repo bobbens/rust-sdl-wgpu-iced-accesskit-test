@@ -1,6 +1,6 @@
 //mod controls;
 mod iced_sdl;
-//mod menu_main;
+mod menu_main;
 mod scene;
 mod toolkit;
 mod toolkit_lua;
@@ -81,9 +81,11 @@ pub fn main() -> Result<(), String> {
     let mut program =
         toolkit_lua::Toolkit::new(&mut engine, &device, &queue, scale_factor, width, height);
 
-    program.open(toolkit_lua::ToolkitProgramLua::new().unwrap_or_else(|err| {
-        panic!("{}", err);
-    }));
+    program.open(toolkit_lua::ToolkitProgram::Lua(
+        toolkit_lua::ToolkitProgramLua::new().unwrap_or_else(|err| {
+            panic!("{}", err);
+        }),
+    ));
 
     let mut event_pump = sdl_context.event_pump()?;
     'running: loop {
