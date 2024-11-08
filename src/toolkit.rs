@@ -57,7 +57,7 @@ pub fn window(theme: &Theme) -> Style {
 }
 
 pub trait Window {
-    fn update(&mut self, message: Message) -> Task<Message>;
+    fn update(&mut self, message: Message) -> Message;
     fn view(&self) -> Element<'_, Message, Theme, Renderer>;
 }
 
@@ -68,18 +68,16 @@ pub enum ToolkitWindow {
 
 #[derive(Debug, Clone)]
 pub enum Message {
+    None,
     CloseWindow,
     OpenMenuMain,
+    OpenLua,
     Lua(MessageLua),
     MenuMain(crate::menu_main::Message),
 }
 
-impl iced_runtime::Program for ToolkitWindow {
-    type Theme = Theme;
-    type Message = Message;
-    type Renderer = Renderer;
-
-    fn update(&mut self, message: Message) -> iced_runtime::Task<Message> {
+impl Window for ToolkitWindow {
+    fn update(&mut self, message: Message) -> Message {
         match self {
             ToolkitWindow::Lua(state) => state.update(message),
             ToolkitWindow::MenuMain(state) => state.update(message),
@@ -115,14 +113,41 @@ impl iced_runtime::Program for ToolkitProgram {
 
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
+            Message::CloseWindow => {
+                self.windows.pop();
+            }
             Message::OpenMenuMain => {
                 self.windows
                     .push(ToolkitWindow::MenuMain(crate::menu_main::MenuMain::new()));
             }
-            Message::CloseWindow => {
-                self.windows.pop();
+            Message::OpenLua => {
+                self.windows.push(ToolkitWindow::Lua(
+                    crate::toolkit_lua::ToolkitWindowLua::new().unwrap_or_else(|err| {
+                        panic!("{}", err);
+                    }),
+                ));
             }
-            _ => (),
+            _ => {
+                if let Some(wdw) = self.windows.last_mut() {
+                    match wdw.update(message) {
+                        Message::OpenMenuMain => {
+                            self.windows
+                                .push(ToolkitWindow::MenuMain(crate::menu_main::MenuMain::new()));
+                        }
+                        Message::OpenLua => {
+                            self.windows.push(ToolkitWindow::Lua(
+                                crate::toolkit_lua::ToolkitWindowLua::new().unwrap_or_else(|err| {
+                                    panic!("{}", err);
+                                }),
+                            ));
+                        }
+                        Message::CloseWindow => {
+                            self.windows.pop();
+                        }
+                        _ => (),
+                    }
+                }
+            }
         };
         iced_runtime::Task::none()
     }

@@ -2,18 +2,16 @@ use crate::toolkit;
 use crate::toolkit::Message as MessageBase;
 use iced::{Center, Fill};
 use iced_core::{Element, Theme};
-use iced_runtime::{Program, Task};
+use iced_runtime::Task;
 use iced_wgpu::Renderer;
 use iced_widget::{button, column, container};
 
-pub struct MenuMain {
-    pub state: Message,
-}
+pub struct MenuMain {}
 
 #[derive(Debug, Clone)]
 pub enum Message {
     None,
-    //LoadGame,
+    LoadGame,
     NewGame,
     Editors,
     Options,
@@ -23,24 +21,21 @@ pub enum Message {
 
 impl MenuMain {
     pub fn new() -> MenuMain {
-        MenuMain {
-            state: Message::None,
-        }
+        MenuMain {}
     }
 }
 
 impl toolkit::Window for MenuMain {
-    fn update(&mut self, message: MessageBase) -> Task<MessageBase> {
-        match message {
-            MessageBase::MenuMain(m) => {
-                self.state = m;
-                //self.program.open( toolkit_lua::ToolkitWindow::Lua( toolkit_lua::ToolkitWindowLua::new().unwrap_or_else(|err| {
-                //    panic!("{}", err);
-                //})));
+    fn update(&mut self, message: MessageBase) -> MessageBase {
+        if let MessageBase::MenuMain(m) = message {
+            match m {
+                Message::NewGame => MessageBase::OpenLua,
+                Message::ExitGame => MessageBase::CloseWindow,
+                _ => MessageBase::None,
             }
-            _ => unreachable!(),
-        };
-        Task::none()
+        } else {
+            MessageBase::None
+        }
     }
 
     fn view(&self) -> Element<MessageBase, Theme, Renderer> {
@@ -49,10 +44,10 @@ impl toolkit::Window for MenuMain {
                 column![
                     button("Load Game"),
                     button("New Game").on_press(MessageBase::MenuMain(Message::NewGame)),
-                    //button("Editors").on_press(Message::Editors),
+                    button("Editors").on_press(MessageBase::MenuMain(Message::Editors)),
                     //button("Options").on_press(Message::Options),
                     //button("Credits").on_press(Message::Credits),
-                    //button("Exit Game").on_press(Message::ExitGame),
+                    button("Exit Game").on_press(MessageBase::MenuMain(Message::ExitGame)),
                 ]
                 .spacing(10)
                 .padding(20)

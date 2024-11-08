@@ -676,7 +676,7 @@ pub fn open_iced(lua: &mlua::Lua) -> mlua::Result<()> {
 }
 
 impl toolkit::Window for ToolkitWindowLua {
-    fn update(&mut self, message: Message) -> iced_runtime::Task<Message> {
+    fn update(&mut self, message: Message) -> Message {
         match message {
             Message::Lua(m) => {
                 self.update.call::<()>(m.0).unwrap_or_else(|err| {
@@ -685,7 +685,7 @@ impl toolkit::Window for ToolkitWindowLua {
             }
             _ => unreachable!(),
         }
-        iced_runtime::Task::none()
+        Message::None
     }
 
     fn view(&self) -> iced_core::Element<Message, Theme, Renderer> {
