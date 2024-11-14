@@ -104,7 +104,7 @@ impl ToolkitProgram {
 
     pub fn window_update(&mut self, message: Message) {
         window_message(&mut self.windows, message, true);
-        self.open = self.windows.len() > 0;
+        self.open = !self.windows.is_empty();
     }
 }
 
