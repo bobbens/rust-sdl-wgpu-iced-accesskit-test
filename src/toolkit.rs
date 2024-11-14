@@ -62,20 +62,24 @@ pub enum MessageDialogue {
     ContentChanged(String),
 }
 
-#[derive(PartialEq, Eq)]
 pub struct DlgOK {
     msg: String,
+    accept: &'static dyn Fn(),
 }
 impl DlgOK {
-    pub fn new(msg: String) -> DlgOK {
-        DlgOK { msg }
+    pub fn new(msg: String, accept: &'static dyn Fn()) -> DlgOK {
+        DlgOK { msg, accept }
     }
 }
 impl Window for DlgOK {
     fn update(&mut self, message: Message) -> Message {
         if let Message::Dialogue(m) = message {
             match m {
-                MessageDialogue::Accept => Message::CloseWindow,
+                MessageDialogue::Accept => {
+                    let f = self.accept;
+                    f();
+                    Message::CloseWindow
+                }
                 _ => Message::None,
             }
         } else {
@@ -98,7 +102,7 @@ impl Window for DlgOK {
             )
             .style(window)
             .align_x(Center)
-            .width(400),
+            .width(200),
         )
         .style(container::transparent)
         .center(Fill)
@@ -106,16 +110,23 @@ impl Window for DlgOK {
     }
 }
 
-#[derive(PartialEq, Eq)]
 pub struct DlgInput {
     msg: String,
     input: String,
+    accept: &'static dyn Fn(String),
+    cancel: &'static dyn Fn(String),
 }
 impl DlgInput {
-    pub fn new(msg: String) -> DlgInput {
+    pub fn new(
+        msg: String,
+        accept: &'static dyn Fn(String),
+        cancel: &'static dyn Fn(String),
+    ) -> DlgInput {
         DlgInput {
             msg,
             input: String::new(),
+            accept,
+            cancel,
         }
     }
 }
@@ -123,8 +134,16 @@ impl Window for DlgInput {
     fn update(&mut self, message: Message) -> Message {
         if let Message::Dialogue(m) = message {
             match m {
-                MessageDialogue::Accept => Message::None, //Message::OpenLua,
-                MessageDialogue::Cancel => Message::CloseWindow,
+                MessageDialogue::Accept => {
+                    let f = self.accept;
+                    f(self.input.clone());
+                    Message::None
+                }
+                MessageDialogue::Cancel => {
+                    let f = self.cancel;
+                    f(self.input.clone());
+                    Message::CloseWindow
+                }
                 MessageDialogue::ContentChanged(content) => {
                     self.input = content;
                     Message::None
@@ -226,21 +245,26 @@ impl ToolkitProgram {
     }
 }
 
+pub fn dialogue_noop() {}
+pub fn dialogue_noop_string(_string: String) {}
+
 fn window_message(windows: &mut Vec<ToolkitWindow>, message: Message, recurse: bool) {
     match message {
         Message::CloseWindow => {
             windows.pop();
         }
         Message::OpenMenuMain => {
-            windows.push(ToolkitWindow::MenuMain(crate::menu_main::MenuMain::new()));
+            windows.push(ToolkitWindow::MenuMain(crate::menu_main::MenuMain::new()))
         }
         Message::OpenLua(tk) => windows.push(ToolkitWindow::Lua(tk)),
         Message::OpenDialogueOK(msg) => {
-            windows.push(ToolkitWindow::DlgOK(DlgOK::new(msg)));
+            windows.push(ToolkitWindow::DlgOK(DlgOK::new(msg, &dialogue_noop)))
         }
-        Message::OpenDialogueInput(msg) => {
-            windows.push(ToolkitWindow::DlgInput(DlgInput::new(msg)));
-        }
+        Message::OpenDialogueInput(msg) => windows.push(ToolkitWindow::DlgInput(DlgInput::new(
+            msg,
+            &dialogue_noop_string,
+            &dialogue_noop_string,
+        ))),
         _ => {
             if recurse {
                 if let Some(wdw) = windows.last_mut() {
