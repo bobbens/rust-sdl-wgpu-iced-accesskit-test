@@ -80,6 +80,7 @@ pub fn main() -> Result<(), String> {
     let scale_factor = 1.2; // TODO hook with SDL or something
     let mut scene = Scene::new(&device, &queue, format);
     let mut engine = iced_wgpu::Engine::new(&adapter, &device, &queue, format, None);
+    let mut clipboard = iced_sdl::Clipboard::new(video_subsystem.clipboard());
     let mut toolkit =
         toolkit::Toolkit::new(&mut engine, &device, &queue, scale_factor, width, height);
 
@@ -95,7 +96,7 @@ pub fn main() -> Result<(), String> {
     toolkit_lua::open_iced(&lua).unwrap();
     lua.load(include_str!("main.lua")).exec().unwrap();
     //let f: mlua::Function = lua.globals().get("main").unwrap();
-    let nlua_cur_th: Option<mlua::Thread> = {
+    let mut nlua_cur_th: Option<mlua::Thread> = {
         let th: mlua::Thread = lua.load("coroutine.create( main )").eval().unwrap();
         th.resume::<()>(()).unwrap_or_else(|err| panic!("{}", err));
         match th.status() {
@@ -143,7 +144,7 @@ pub fn main() -> Result<(), String> {
             }
         }
 
-        toolkit.update(&nlua_cur_th);
+        toolkit.update(&mut clipboard, &mut nlua_cur_th);
 
         let frame = match surface.get_current_texture() {
             Ok(frame) => frame,

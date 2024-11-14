@@ -211,7 +211,6 @@ impl<'a> Toolkit<'a> {
         if !self.state.program().open {
             return;
         }
-
         self.state.queue_event(event)
     }
 
@@ -219,7 +218,11 @@ impl<'a> Toolkit<'a> {
         self.state.queue_message(message)
     }
 
-    pub fn update(&mut self, lua_th: &Option<mlua::Thread>) {
+    pub fn update(
+        &mut self,
+        clipboard: &mut impl iced_core::Clipboard,
+        lua_th: &mut Option<mlua::Thread>,
+    ) {
         let mut mq = MESSAGE_QUEUE.lock().unwrap();
         while let Some(m) = mq.pop() {
             self.queue_message(m);
@@ -234,57 +237,22 @@ impl<'a> Toolkit<'a> {
             &mut self.renderer,
             &self.theme,
             &iced_core::renderer::Style::default(),
-            &mut iced_core::clipboard::Null,
+            clipboard,
             &mut self.debug,
         );
 
+        // Run Lua if window was closed. TODO check if window was closed and another was opened
         if let Some(th) = lua_th {
             if self.state.program().windows.len() < nw {
                 dbg!(nw, self.state.program().windows.len());
                 dbg!("resume");
                 th.resume::<()>(()).unwrap();
+                if th.status() != mlua::ThreadStatus::Resumable {
+                    *lua_th = None;
+                }
             }
         };
     }
-    /*
-    message: Message) -> Task<Message> {
-        let state = match self.state.last_mut() {
-            Some(state) => state,
-            _ => {
-                return iced_runtime::Task::none();
-            }
-        };
-
-        if state.is_queue_empty() {
-            return iced_runtime::Task::none();
-        }
-        let theme = crate::toolkit::theme();
-
-        // We update iced
-        let _ = state.update(
-            self.viewport.logical_size(),
-            self.cursor_position,
-            &mut self.renderer,
-            &theme,
-            &iced_core::renderer::Style::default(),
-            &mut iced_core::clipboard::Null,
-            &mut self.debug,
-        );
-
-        // Handle events from the app
-        //let program = state.program();
-        // match program.state {
-        //     menu_main::Message::ExitGame => {
-        //         break 'running;
-        //     }
-        //     _ => (),
-        // };
-
-        // and request a redraw
-        //window.request_redraw();
-        iced_runtime::Task::none()
-    }
-    */
 
     pub fn draw(
         &mut self,

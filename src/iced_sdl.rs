@@ -1,5 +1,29 @@
 use sdl2::event::{Event, WindowEvent};
 
+pub struct Clipboard(sdl2::clipboard::ClipboardUtil);
+impl Clipboard {
+    pub fn new(clipboard: sdl2::clipboard::ClipboardUtil) -> Self {
+        Self(clipboard)
+    }
+}
+impl iced_core::Clipboard for Clipboard {
+    fn read(&self, kind: iced_core::clipboard::Kind) -> Option<String> {
+        match kind {
+            iced_core::clipboard::Kind::Standard => match self.0.has_clipboard_text() {
+                true => Some(self.0.clipboard_text().unwrap()),
+                false => None,
+            },
+            iced_core::clipboard::Kind::Primary => match self.0.has_primary_selection_text() {
+                true => Some(self.0.primary_selection_text().unwrap()),
+                false => None,
+            },
+        }
+    }
+    fn write(&mut self, _kind: iced_core::clipboard::Kind, contents: String) {
+        self.0.set_clipboard_text(contents.as_str()).unwrap();
+    }
+}
+
 pub fn mouse_button(mouse_btn: &sdl2::mouse::MouseButton) -> iced::mouse::Button {
     match mouse_btn {
         sdl2::mouse::MouseButton::Left => iced::mouse::Button::Left,
