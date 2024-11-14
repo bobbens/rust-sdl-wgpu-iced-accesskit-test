@@ -63,6 +63,50 @@ pub enum MessageDialogue {
 }
 
 #[derive(PartialEq, Eq)]
+pub struct DlgOK {
+    msg: String,
+}
+impl DlgOK {
+    pub fn new(msg: String) -> DlgOK {
+        DlgOK { msg }
+    }
+}
+impl Window for DlgOK {
+    fn update(&mut self, message: Message) -> Message {
+        if let Message::Dialogue(m) = message {
+            match m {
+                MessageDialogue::Accept => Message::CloseWindow,
+                _ => Message::None,
+            }
+        } else {
+            Message::None
+        }
+    }
+
+    fn view(&self) -> Element<Message, Theme, Renderer> {
+        use iced::{color, Center, Fill};
+        use iced_widget::{button, column, container, text};
+        container(
+            container(
+                column![
+                    text(self.msg.as_str()).color(color!(0xffffff)),
+                    button("OK").on_press(Message::Dialogue(MessageDialogue::Accept)),
+                ]
+                .spacing(10)
+                .padding(20)
+                .align_x(Center),
+            )
+            .style(window)
+            .align_x(Center)
+            .width(400),
+        )
+        .style(container::transparent)
+        .center(Fill)
+        .into()
+    }
+}
+
+#[derive(PartialEq, Eq)]
 pub struct DlgInput {
     msg: String,
     input: String,
@@ -90,7 +134,6 @@ impl Window for DlgInput {
             Message::None
         }
     }
-
     fn view(&self) -> Element<Message, Theme, Renderer> {
         use iced::{color, Center, Fill};
         use iced_widget::{button, column, container, row, text, text_input};
@@ -112,7 +155,7 @@ impl Window for DlgInput {
                 .padding(20)
                 .align_x(Center),
             )
-            .style(crate::toolkit::window)
+            .style(window)
             .align_x(Center)
             .width(400),
         )
@@ -125,6 +168,7 @@ impl Window for DlgInput {
 pub enum ToolkitWindow {
     Lua(ToolkitWindowLua),
     MenuMain(crate::menu_main::MenuMain),
+    DlgOK(DlgOK),
     DlgInput(DlgInput),
 }
 
@@ -134,6 +178,7 @@ pub enum Message {
     CloseWindow,
     OpenMenuMain,
     OpenLua(ToolkitWindowLua),
+    OpenDialogueOK(String),
     OpenDialogueInput(String),
     Lua(MessageLua),
     MenuMain(crate::menu_main::Message),
@@ -145,6 +190,7 @@ impl Window for ToolkitWindow {
         match self {
             ToolkitWindow::Lua(state) => state.update(message),
             ToolkitWindow::MenuMain(state) => state.update(message),
+            ToolkitWindow::DlgOK(state) => state.update(message),
             ToolkitWindow::DlgInput(state) => state.update(message),
             //_ => iced_runtime::Task::none(),
         }
@@ -154,6 +200,7 @@ impl Window for ToolkitWindow {
         match self {
             ToolkitWindow::Lua(state) => state.view(),
             ToolkitWindow::MenuMain(state) => state.view(),
+            ToolkitWindow::DlgOK(state) => state.view(),
             ToolkitWindow::DlgInput(state) => state.view(),
             //_ => iced_widget::text("").into(),
         }
@@ -188,6 +235,9 @@ fn window_message(windows: &mut Vec<ToolkitWindow>, message: Message, recurse: b
             windows.push(ToolkitWindow::MenuMain(crate::menu_main::MenuMain::new()));
         }
         Message::OpenLua(tk) => windows.push(ToolkitWindow::Lua(tk)),
+        Message::OpenDialogueOK(msg) => {
+            windows.push(ToolkitWindow::DlgOK(DlgOK::new(msg)));
+        }
         Message::OpenDialogueInput(msg) => {
             windows.push(ToolkitWindow::DlgInput(DlgInput::new(msg)));
         }

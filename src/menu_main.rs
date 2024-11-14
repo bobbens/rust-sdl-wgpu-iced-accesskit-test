@@ -33,6 +33,9 @@ impl toolkit::Window for MenuMain {
                     "What will you name your new pilot?",
                 )),
                 Message::ExitGame => MessageBase::CloseWindow,
+                Message::Options => {
+                    MessageBase::OpenDialogueOK(String::from("Not implemented yet!"))
+                }
                 _ => MessageBase::None,
             }
         } else {
@@ -47,7 +50,7 @@ impl toolkit::Window for MenuMain {
                     button("Load Game"),
                     button("New Game").on_press(MessageBase::MenuMain(Message::NewGame)),
                     button("Editors").on_press(MessageBase::MenuMain(Message::Editors)),
-                    //button("Options").on_press(Message::Options),
+                    button("Options").on_press(MessageBase::MenuMain(Message::Options)),
                     //button("Credits").on_press(Message::Credits),
                     button("Exit Game").on_press(MessageBase::MenuMain(Message::ExitGame)),
                 ]
