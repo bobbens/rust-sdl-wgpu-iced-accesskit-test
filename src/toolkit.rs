@@ -55,10 +55,77 @@ pub trait Window {
     fn view(&self) -> Element<'_, Message, Theme, Renderer>;
 }
 
-#[derive(PartialEq)]
+#[derive(Debug, Clone)]
+pub enum MessageDialogue {
+    Accept,
+    Cancel,
+    ContentChanged(String),
+}
+
+#[derive(PartialEq, Eq)]
+pub struct DlgInput {
+    msg: String,
+    input: String,
+}
+impl DlgInput {
+    pub fn new(msg: String) -> DlgInput {
+        DlgInput {
+            msg,
+            input: String::new(),
+        }
+    }
+}
+impl Window for DlgInput {
+    fn update(&mut self, message: Message) -> Message {
+        if let Message::Dialogue(m) = message {
+            match m {
+                MessageDialogue::Accept => Message::None, //Message::OpenLua,
+                MessageDialogue::Cancel => Message::CloseWindow,
+                MessageDialogue::ContentChanged(content) => {
+                    self.input = content;
+                    Message::None
+                } //_ => Message::None,
+            }
+        } else {
+            Message::None
+        }
+    }
+
+    fn view(&self) -> Element<Message, Theme, Renderer> {
+        use iced::{color, Center, Fill};
+        use iced_widget::{button, column, container, row, text, text_input};
+
+        container(
+            container(
+                column![
+                    text(self.msg.as_str()).color(color!(0xffffff)),
+                    text_input("", &self.input).on_input(|str| {
+                        Message::Dialogue(MessageDialogue::ContentChanged(str))
+                    }),
+                    row![
+                        button("OK").on_press(Message::Dialogue(MessageDialogue::Accept)),
+                        button("Cancel").on_press(Message::Dialogue(MessageDialogue::Cancel)),
+                    ]
+                    .spacing(20),
+                ]
+                .spacing(10)
+                .padding(20)
+                .align_x(Center),
+            )
+            .style(crate::toolkit::window)
+            .align_x(Center)
+            .width(400),
+        )
+        .style(container::transparent)
+        .center(Fill)
+        .into()
+    }
+}
+
 pub enum ToolkitWindow {
     Lua(ToolkitWindowLua),
     MenuMain(crate::menu_main::MenuMain),
+    DlgInput(DlgInput),
 }
 
 #[derive(Debug, Clone)]
@@ -67,8 +134,10 @@ pub enum Message {
     CloseWindow,
     OpenMenuMain,
     OpenLua(ToolkitWindowLua),
+    OpenDialogueInput(String),
     Lua(MessageLua),
     MenuMain(crate::menu_main::Message),
+    Dialogue(MessageDialogue),
 }
 
 impl Window for ToolkitWindow {
@@ -76,6 +145,7 @@ impl Window for ToolkitWindow {
         match self {
             ToolkitWindow::Lua(state) => state.update(message),
             ToolkitWindow::MenuMain(state) => state.update(message),
+            ToolkitWindow::DlgInput(state) => state.update(message),
             //_ => iced_runtime::Task::none(),
         }
     }
@@ -84,6 +154,7 @@ impl Window for ToolkitWindow {
         match self {
             ToolkitWindow::Lua(state) => state.view(),
             ToolkitWindow::MenuMain(state) => state.view(),
+            ToolkitWindow::DlgInput(state) => state.view(),
             //_ => iced_widget::text("").into(),
         }
     }
@@ -117,6 +188,9 @@ fn window_message(windows: &mut Vec<ToolkitWindow>, message: Message, recurse: b
             windows.push(ToolkitWindow::MenuMain(crate::menu_main::MenuMain::new()));
         }
         Message::OpenLua(tk) => windows.push(ToolkitWindow::Lua(tk)),
+        Message::OpenDialogueInput(msg) => {
+            windows.push(ToolkitWindow::DlgInput(DlgInput::new(msg)));
+        }
         _ => {
             if recurse {
                 if let Some(wdw) = windows.last_mut() {

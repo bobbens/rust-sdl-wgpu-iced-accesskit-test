@@ -29,7 +29,9 @@ impl toolkit::Window for MenuMain {
     fn update(&mut self, message: MessageBase) -> MessageBase {
         if let MessageBase::MenuMain(m) = message {
             match m {
-                Message::NewGame => MessageBase::None, //MessageBase::OpenLua,
+                Message::NewGame => MessageBase::OpenDialogueInput(String::from(
+                    "What will you name your new pilot?",
+                )),
                 Message::ExitGame => MessageBase::CloseWindow,
                 _ => MessageBase::None,
             }

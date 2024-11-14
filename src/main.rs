@@ -95,7 +95,9 @@ pub fn main() -> Result<(), String> {
     let lua = nlua.lua;
     toolkit_lua::open_iced(&lua).unwrap();
     lua.load(include_str!("main.lua")).exec().unwrap();
+    let mut nlua_cur_th: Option<mlua::Thread> = None;
     //let f: mlua::Function = lua.globals().get("main").unwrap();
+    /*
     let mut nlua_cur_th: Option<mlua::Thread> = {
         let th: mlua::Thread = lua.load("coroutine.create( main )").eval().unwrap();
         th.resume::<()>(()).unwrap_or_else(|err| panic!("{}", err));
@@ -104,9 +106,10 @@ pub fn main() -> Result<(), String> {
             _ => None,
         }
     };
+    */
 
     //program.open(toolkit::ToolkitWindow::MenuMain(menu_main::MenuMain::new()));
-    //toolkit.queue_message(toolkit::Message::OpenMenuMain);
+    toolkit.queue_message(toolkit::Message::OpenMenuMain);
 
     let mut event_pump = sdl_context.event_pump()?;
     'running: loop {
