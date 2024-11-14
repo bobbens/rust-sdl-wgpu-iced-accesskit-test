@@ -1,10 +1,12 @@
 //mod controls;
 mod iced_sdl;
 mod menu_main;
+mod nlua;
 mod scene;
 mod toolkit;
 mod toolkit_lua;
 
+use nlua::NLua;
 use scene::Scene;
 
 use iced_wgpu::wgpu;
@@ -87,8 +89,23 @@ pub fn main() -> Result<(), String> {
     })));
     */
 
+    // Create the Lua environment
+    let nlua = NLua::new();
+    let lua = nlua.lua;
+    toolkit_lua::open_iced(&lua).unwrap();
+    lua.load(include_str!("main.lua")).exec().unwrap();
+    //let f: mlua::Function = lua.globals().get("main").unwrap();
+    let nlua_cur_th: Option<mlua::Thread> = {
+        let th: mlua::Thread = lua.load("coroutine.create( main )").eval().unwrap();
+        th.resume::<()>(()).unwrap_or_else(|err| panic!("{}", err));
+        match th.status() {
+            mlua::ThreadStatus::Resumable => Some(th),
+            _ => None,
+        }
+    };
+
     //program.open(toolkit::ToolkitWindow::MenuMain(menu_main::MenuMain::new()));
-    toolkit.queue_message(toolkit::Message::OpenMenuMain);
+    //toolkit.queue_message(toolkit::Message::OpenMenuMain);
 
     let mut event_pump = sdl_context.event_pump()?;
     'running: loop {
@@ -120,13 +137,13 @@ pub fn main() -> Result<(), String> {
                 }
             }
 
-            // Map window event to iced event
+            //Map window event to iced event
             if let Some(evt) = iced_sdl::window_event(&event, scale_factor) {
                 toolkit.queue_event(evt);
             }
         }
 
-        toolkit.update();
+        toolkit.update(&nlua_cur_th);
 
         let frame = match surface.get_current_texture() {
             Ok(frame) => frame,

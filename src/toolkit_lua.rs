@@ -430,84 +430,6 @@ impl mlua::UserData for LuaContainer {
     }
 }
 
-#[allow(dead_code)]
-#[derive(Debug)]
-pub struct ToolkitWindowLua {
-    lua: mlua::Lua,
-    update: mlua::Function,
-    view: mlua::Function,
-}
-
-impl ToolkitWindowLua {
-    pub fn new() -> mlua::Result<ToolkitWindowLua> {
-        let lua = mlua::Lua::new();
-        open_iced(&lua)?;
-
-        lua.load(
-            "
-local PALETTE = iced.palette(
-    iced.color( 0.2, 0.2, 0.2, 1 ), -- background
-    iced.color( 0.95, 0.95, 0.95, 1 ), -- text
-    iced.color( 0.25, 0.25, 0.25, 1 ), -- primary
-    iced.color( 58.0 / 255.0, 170.0 / 255.0, 153.0 / 255.0, 1 ), -- success
-    iced.color( 204.0 / 255.0, 68.0 / 255.0, 153.0 / 255.0, 1 ) -- danger
-)
-
-local function generate( palette )
-    local palext = palette:generate()
-    return palext
-end
-
-function update( msg )
-    print( msg )
-    if msg=='Exit Game' then
-        return true
-    end
-end
-
-local function window( theme )
-    local palette = theme:palette()
-    local palext = theme:extended_palette()
-
-    return iced.Container.style()
-    :border( iced.border( palext.background.strong.color, 1, 10 ) )
-    :background( palette.background )
-end
-
-function view()
-    return iced.container(
-        iced.container(
-            iced.column{
-                iced.button('Load Game'),
-                iced.button('New Game'):on_press('New Game'),
-                iced.button('Editors'):on_press('Editors'),
-                iced.button('Options'):on_press('Options'),
-                iced.button('Credits'):on_press('Credits'),
-                iced.button('Exit Game'):on_press('Exit Game'),
-            }
-            :spacing(10)
-            :padding(20)
-            :align_x( iced.Center() )
-        )
-        :style( window )
-        :align_x( iced.Center() )
-        :width( 150 )
-    )
-    :center( iced.Fill() )
-end
-        ",
-        )
-        .exec()?;
-
-        let globals = lua.globals();
-        Ok(ToolkitWindowLua {
-            lua,
-            update: globals.get("update")?,
-            view: globals.get("view")?,
-        })
-    }
-}
-
 fn value_to_element(
     val: mlua::Value,
 ) -> mlua::Result<iced::Element<'static, Message, Theme, Renderer>> {
@@ -670,8 +592,39 @@ pub fn open_iced(lua: &mlua::Lua) -> mlua::Result<()> {
             Ok(LuaButton(iced_widget::button(value_to_element(val)?)))
         })?,
     )?;
+    // Run function
+    iced.set(
+        "_run",
+        lua.create_function(|_lua, (update, view): (mlua::Function, mlua::Function)| {
+            dbg!("added!");
+            toolkit::MESSAGE_QUEUE
+                .lock()
+                .unwrap()
+                .push(Message::OpenLua(ToolkitWindowLua::new(update, view)?));
+            Ok(())
+        })?,
+    )?;
     globals.set("iced", iced)?;
+    lua.load(
+        "iced.run = function (...)
+        iced._run(...)
+        coroutine.yield()
+    end ",
+    )
+    .exec()?;
     Ok(())
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ToolkitWindowLua {
+    update: mlua::Function,
+    view: mlua::Function,
+}
+
+impl ToolkitWindowLua {
+    pub fn new(update: mlua::Function, view: mlua::Function) -> mlua::Result<ToolkitWindowLua> {
+        Ok(ToolkitWindowLua { update, view })
+    }
 }
 
 impl toolkit::Window for ToolkitWindowLua {

@@ -55,6 +55,7 @@ pub trait Window {
     fn view(&self) -> Element<'_, Message, Theme, Renderer>;
 }
 
+#[derive(PartialEq)]
 pub enum ToolkitWindow {
     Lua(ToolkitWindowLua),
     MenuMain(crate::menu_main::MenuMain),
@@ -65,7 +66,7 @@ pub enum Message {
     None,
     CloseWindow,
     OpenMenuMain,
-    OpenLua,
+    OpenLua(ToolkitWindowLua),
     Lua(MessageLua),
     MenuMain(crate::menu_main::Message),
 }
@@ -89,18 +90,21 @@ impl Window for ToolkitWindow {
 }
 
 pub struct ToolkitProgram {
+    pub open: bool,
     pub windows: Vec<ToolkitWindow>,
 }
 
 impl ToolkitProgram {
     pub fn new() -> ToolkitProgram {
         ToolkitProgram {
+            open: false,
             windows: Vec::new(),
         }
     }
 
     pub fn window_update(&mut self, message: Message) {
-        window_message(&mut self.windows, message, true)
+        window_message(&mut self.windows, message, true);
+        self.open = self.windows.len() > 0;
     }
 }
 
@@ -112,13 +116,7 @@ fn window_message(windows: &mut Vec<ToolkitWindow>, message: Message, recurse: b
         Message::OpenMenuMain => {
             windows.push(ToolkitWindow::MenuMain(crate::menu_main::MenuMain::new()));
         }
-        Message::OpenLua => {
-            windows.push(ToolkitWindow::Lua(
-                crate::toolkit_lua::ToolkitWindowLua::new().unwrap_or_else(|err| {
-                    panic!("{}", err);
-                }),
-            ));
-        }
+        Message::OpenLua(tk) => windows.push(ToolkitWindow::Lua(tk)),
         _ => {
             if recurse {
                 if let Some(wdw) = windows.last_mut() {
@@ -148,6 +146,8 @@ impl iced_runtime::Program for ToolkitProgram {
         iced_widget::Stack::with_children(ele).into()
     }
 }
+
+pub static MESSAGE_QUEUE: std::sync::Mutex<Vec<Message>> = std::sync::Mutex::new(Vec::new());
 
 pub struct Toolkit<'a> {
     theme: Theme,
@@ -208,6 +208,10 @@ impl<'a> Toolkit<'a> {
     }
 
     pub fn queue_event(&mut self, event: iced_core::Event) {
+        if !self.state.program().open {
+            return;
+        }
+
         self.state.queue_event(event)
     }
 
@@ -215,12 +219,14 @@ impl<'a> Toolkit<'a> {
         self.state.queue_message(message)
     }
 
-    //pub fn open ( &mut self, program: impl iced_runtime::Program<Renderer = iced_wgpu::Renderer> + 'static ) -> () {
-    //pub fn open(&mut self, program: ToolkitWindow) -> () {
-    //    self.state.program().windows.push( program );
-    //}
+    pub fn update(&mut self, lua_th: &Option<mlua::Thread>) {
+        let mut mq = MESSAGE_QUEUE.lock().unwrap();
+        while let Some(m) = mq.pop() {
+            self.queue_message(m);
+        }
 
-    pub fn update(&mut self) {
+        let nw = self.state.program().windows.len();
+
         // We update iced
         let _ = self.state.update(
             self.viewport.logical_size(),
@@ -231,6 +237,14 @@ impl<'a> Toolkit<'a> {
             &mut iced_core::clipboard::Null,
             &mut self.debug,
         );
+
+        if let Some(th) = lua_th {
+            if self.state.program().windows.len() < nw {
+                dbg!(nw, self.state.program().windows.len());
+                dbg!("resume");
+                th.resume::<()>(()).unwrap();
+            }
+        };
     }
     /*
     message: Message) -> Task<Message> {
@@ -279,6 +293,10 @@ impl<'a> Toolkit<'a> {
         encoder: &mut wgpu::CommandEncoder,
         frame: &wgpu::SurfaceTexture,
     ) {
+        if !self.state.program().open {
+            return;
+        }
+
         self.renderer.present(
             engine,
             self.device,

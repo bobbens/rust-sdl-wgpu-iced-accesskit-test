@@ -5,6 +5,7 @@ use iced_core::{Element, Theme};
 use iced_wgpu::Renderer;
 use iced_widget::{button, column, container};
 
+#[derive(PartialEq, Eq)]
 pub struct MenuMain {}
 
 #[derive(Debug, Clone)]
@@ -28,7 +29,7 @@ impl toolkit::Window for MenuMain {
     fn update(&mut self, message: MessageBase) -> MessageBase {
         if let MessageBase::MenuMain(m) = message {
             match m {
-                Message::NewGame => MessageBase::OpenLua,
+                Message::NewGame => MessageBase::None, //MessageBase::OpenLua,
                 Message::ExitGame => MessageBase::CloseWindow,
                 _ => MessageBase::None,
             }
