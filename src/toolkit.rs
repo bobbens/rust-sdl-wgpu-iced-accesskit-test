@@ -113,20 +113,14 @@ impl Window for DlgOK {
 pub struct DlgInput {
     msg: String,
     input: String,
-    accept: &'static dyn Fn(String),
-    cancel: &'static dyn Fn(String),
+    accept: &'static dyn Fn(bool, String),
 }
 impl DlgInput {
-    pub fn new(
-        msg: String,
-        accept: &'static dyn Fn(String),
-        cancel: &'static dyn Fn(String),
-    ) -> DlgInput {
+    pub fn new(msg: String, accept: &'static dyn Fn(bool, String)) -> DlgInput {
         DlgInput {
             msg,
             input: String::new(),
             accept,
-            cancel,
         }
     }
 }
@@ -136,12 +130,12 @@ impl Window for DlgInput {
             match m {
                 MessageDialogue::Accept => {
                     let f = self.accept;
-                    f(self.input.clone());
+                    f(true, self.input.clone());
                     Message::None
                 }
                 MessageDialogue::Cancel => {
-                    let f = self.cancel;
-                    f(self.input.clone());
+                    let f = self.accept;
+                    f(false, self.input.clone());
                     Message::CloseWindow
                 }
                 MessageDialogue::ContentChanged(content) => {
@@ -191,17 +185,25 @@ pub enum ToolkitWindow {
     DlgInput(DlgInput),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum Message {
     None,
     CloseWindow,
     OpenMenuMain,
     OpenLua(ToolkitWindowLua),
-    OpenDialogueOK(String),
-    OpenDialogueInput(String),
+    OpenDialogueOK(String, &'static (dyn Fn() + Send + Sync)),
+    OpenDialogueInput(String, &'static (dyn Fn(bool, String) + Send + Sync)),
     Lua(MessageLua),
     MenuMain(crate::menu_main::Message),
     Dialogue(MessageDialogue),
+}
+impl std::fmt::Debug for Message {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        match self {
+            Message::OpenDialogueOK(s, _) => write!(f, "OpenDialogueOK( {}, Fn )", s),
+            o => o.fmt(f),
+        }
+    }
 }
 
 impl Window for ToolkitWindow {
@@ -245,8 +247,8 @@ impl ToolkitProgram {
     }
 }
 
-pub fn dialogue_noop() {}
-pub fn dialogue_noop_string(_string: String) {}
+pub fn dialogue_noop_ok() {}
+pub fn dialogue_noop_input(_b: bool, _s: String) {}
 
 fn window_message(windows: &mut Vec<ToolkitWindow>, message: Message, recurse: bool) {
     match message {
@@ -257,14 +259,12 @@ fn window_message(windows: &mut Vec<ToolkitWindow>, message: Message, recurse: b
             windows.push(ToolkitWindow::MenuMain(crate::menu_main::MenuMain::new()))
         }
         Message::OpenLua(tk) => windows.push(ToolkitWindow::Lua(tk)),
-        Message::OpenDialogueOK(msg) => {
-            windows.push(ToolkitWindow::DlgOK(DlgOK::new(msg, &dialogue_noop)))
+        Message::OpenDialogueOK(msg, accept) => {
+            windows.push(ToolkitWindow::DlgOK(DlgOK::new(msg, accept)))
         }
-        Message::OpenDialogueInput(msg) => windows.push(ToolkitWindow::DlgInput(DlgInput::new(
-            msg,
-            &dialogue_noop_string,
-            &dialogue_noop_string,
-        ))),
+        Message::OpenDialogueInput(msg, accept) => {
+            windows.push(ToolkitWindow::DlgInput(DlgInput::new(msg, accept)))
+        }
         _ => {
             if recurse {
                 if let Some(wdw) = windows.last_mut() {

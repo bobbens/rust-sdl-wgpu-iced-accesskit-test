@@ -29,13 +29,15 @@ impl toolkit::Window for MenuMain {
     fn update(&mut self, message: MessageBase) -> MessageBase {
         if let MessageBase::MenuMain(m) = message {
             match m {
-                Message::NewGame => MessageBase::OpenDialogueInput(String::from(
-                    "What will you name your new pilot?",
-                )),
+                Message::NewGame => MessageBase::OpenDialogueInput(
+                    String::from("What will you name your new pilot?"),
+                    &toolkit::dialogue_noop_input,
+                ),
                 Message::ExitGame => MessageBase::CloseWindow,
-                Message::Options => {
-                    MessageBase::OpenDialogueOK(String::from("Not implemented yet!"))
-                }
+                Message::Options => MessageBase::OpenDialogueOK(
+                    String::from("Not implemented yet!"),
+                    &toolkit::dialogue_noop_ok,
+                ),
                 _ => MessageBase::None,
             }
         } else {
