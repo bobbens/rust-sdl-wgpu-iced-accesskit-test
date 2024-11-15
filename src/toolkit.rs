@@ -113,6 +113,7 @@ pub struct DlgInput {
     msg: String,
     input: String,
     accept: &'static dyn Fn(bool, String) -> Message,
+    id: iced_widget::text_input::Id,
 }
 impl DlgInput {
     pub fn new(msg: String, accept: &'static dyn Fn(bool, String) -> Message) -> DlgInput {
@@ -120,7 +121,12 @@ impl DlgInput {
             msg,
             input: String::new(),
             accept,
+            id: iced_widget::text_input::Id::unique(),
         }
+    }
+
+    fn focus(&self) -> Task<Message> {
+        iced_widget::text_input::focus(self.id.clone())
     }
 }
 impl Window for DlgInput {
@@ -147,14 +153,13 @@ impl Window for DlgInput {
     fn view(&self) -> Element<Message, Theme, Renderer> {
         use iced::{color, Center, Fill};
         use iced_widget::{button, column, container, row, text, text_input};
-
         container(
             container(
                 column![
                     text(self.msg.as_str()).color(color!(0xffffff)),
-                    text_input("", &self.input).on_input(|str| {
-                        Message::Dialogue(MessageDialogue::ContentChanged(str))
-                    }),
+                    text_input("", &self.input)
+                        .on_input(|str| { Message::Dialogue(MessageDialogue::ContentChanged(str)) })
+                        .id(self.id.clone()),
                     row![
                         button("OK").on_press(Message::Dialogue(MessageDialogue::Accept)),
                         button("Cancel").on_press(Message::Dialogue(MessageDialogue::Cancel)),
@@ -214,7 +219,7 @@ impl Window for ToolkitWindow {
             ToolkitWindow::MenuMain(state) => state.update(message),
             ToolkitWindow::DlgOK(state) => state.update(message),
             ToolkitWindow::DlgInput(state) => state.update(message),
-            //_ => iced_runtime::Task::none(),
+            //_ => Task::none(),
         }
     }
 
@@ -242,9 +247,10 @@ impl ToolkitProgram {
         }
     }
 
-    pub fn window_update(&mut self, message: Message) {
-        window_message(&mut self.windows, message, true);
+    pub fn window_update(&mut self, message: Message) -> Task<Message> {
+        let t = window_message(&mut self.windows, message, true);
         self.open = !self.windows.is_empty();
+        t
     }
 }
 
@@ -257,37 +263,54 @@ pub fn dialogue_noop_input(_b: bool, _s: String) -> Message {
     Message::CloseWindow
 }
 
-fn window_message(windows: &mut Vec<ToolkitWindow>, message: Message, recurse: bool) {
+fn window_message(
+    windows: &mut Vec<ToolkitWindow>,
+    message: Message,
+    recurse: bool,
+) -> Task<Message> {
     match message {
         Message::CloseWindow => {
             windows.pop();
+            Task::none()
         }
         Message::CloseWindows(n) => {
             for _ in 0..n {
                 if windows.pop().is_none() {
-                    return;
+                    break;
                 }
             }
+            Task::none()
         }
         Message::OpenMenuMain => {
-            windows.push(ToolkitWindow::MenuMain(crate::menu_main::MenuMain::new()))
+            windows.push(ToolkitWindow::MenuMain(crate::menu_main::MenuMain::new()));
+            Task::none()
         }
-        Message::OpenLua(tk) => windows.push(ToolkitWindow::Lua(tk)),
+        Message::OpenLua(tk) => {
+            windows.push(ToolkitWindow::Lua(tk));
+            Task::none()
+        }
         Message::OpenDialogueOK(msg, accept) => {
-            windows.push(ToolkitWindow::DlgOK(DlgOK::new(msg, accept)))
+            windows.push(ToolkitWindow::DlgOK(DlgOK::new(msg, accept)));
+            Task::none()
         }
         Message::OpenDialogueInput(msg, accept) => {
-            windows.push(ToolkitWindow::DlgInput(DlgInput::new(msg, accept)))
+            let w = DlgInput::new(msg, accept);
+            let t = w.focus();
+            windows.push(ToolkitWindow::DlgInput(w));
+            t
         }
         _ => {
             if recurse {
                 if let Some(wdw) = windows.last_mut() {
                     match wdw.update(message) {
                         Message::None => (),
-                        msg => window_message(windows, msg, false),
+                        msg => {
+                            return window_message(windows, msg, false);
+                        }
                     }
                 }
             }
+            Task::none()
         }
     }
 }
@@ -298,8 +321,7 @@ impl iced_runtime::Program for ToolkitProgram {
     type Renderer = Renderer;
 
     fn update(&mut self, message: Message) -> Task<Message> {
-        self.window_update(message);
-        iced_runtime::Task::none()
+        self.window_update(message)
     }
 
     fn view(&self) -> Element<'_, Message, Theme, Renderer> {
