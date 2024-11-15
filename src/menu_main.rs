@@ -25,13 +25,23 @@ impl MenuMain {
     }
 }
 
+fn pilot_new(accept: bool, name: String) -> MessageBase {
+    match accept {
+        true => MessageBase::OpenDialogueOK(
+            format!("Your name is {name}!", name = name),
+            &|| -> MessageBase { MessageBase::CloseWindows(2) },
+        ),
+        false => MessageBase::CloseWindow,
+    }
+}
+
 impl toolkit::Window for MenuMain {
     fn update(&mut self, message: MessageBase) -> MessageBase {
         if let MessageBase::MenuMain(m) = message {
             match m {
                 Message::NewGame => MessageBase::OpenDialogueInput(
                     String::from("What will you name your new pilot?"),
-                    &toolkit::dialogue_noop_input,
+                    &pilot_new,
                 ),
                 Message::ExitGame => MessageBase::CloseWindow,
                 Message::Options => MessageBase::OpenDialogueOK(

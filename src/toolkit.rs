@@ -64,10 +64,10 @@ pub enum MessageDialogue {
 
 pub struct DlgOK {
     msg: String,
-    accept: &'static dyn Fn(),
+    accept: &'static dyn Fn() -> Message,
 }
 impl DlgOK {
-    pub fn new(msg: String, accept: &'static dyn Fn()) -> DlgOK {
+    pub fn new(msg: String, accept: &'static dyn Fn() -> Message) -> DlgOK {
         DlgOK { msg, accept }
     }
 }
@@ -77,8 +77,7 @@ impl Window for DlgOK {
             match m {
                 MessageDialogue::Accept => {
                     let f = self.accept;
-                    f();
-                    Message::CloseWindow
+                    f()
                 }
                 _ => Message::None,
             }
@@ -113,10 +112,10 @@ impl Window for DlgOK {
 pub struct DlgInput {
     msg: String,
     input: String,
-    accept: &'static dyn Fn(bool, String),
+    accept: &'static dyn Fn(bool, String) -> Message,
 }
 impl DlgInput {
-    pub fn new(msg: String, accept: &'static dyn Fn(bool, String)) -> DlgInput {
+    pub fn new(msg: String, accept: &'static dyn Fn(bool, String) -> Message) -> DlgInput {
         DlgInput {
             msg,
             input: String::new(),
@@ -130,13 +129,11 @@ impl Window for DlgInput {
             match m {
                 MessageDialogue::Accept => {
                     let f = self.accept;
-                    f(true, self.input.clone());
-                    Message::None
+                    f(true, self.input.clone())
                 }
                 MessageDialogue::Cancel => {
                     let f = self.accept;
-                    f(false, self.input.clone());
-                    Message::CloseWindow
+                    f(false, self.input.clone())
                 }
                 MessageDialogue::ContentChanged(content) => {
                     self.input = content;
@@ -189,10 +186,14 @@ pub enum ToolkitWindow {
 pub enum Message {
     None,
     CloseWindow,
+    CloseWindows(u32),
     OpenMenuMain,
     OpenLua(ToolkitWindowLua),
-    OpenDialogueOK(String, &'static (dyn Fn() + Send + Sync)),
-    OpenDialogueInput(String, &'static (dyn Fn(bool, String) + Send + Sync)),
+    OpenDialogueOK(String, &'static (dyn Fn() -> Message + Send + Sync)),
+    OpenDialogueInput(
+        String,
+        &'static (dyn Fn(bool, String) -> Message + Send + Sync),
+    ),
     Lua(MessageLua),
     MenuMain(crate::menu_main::Message),
     Dialogue(MessageDialogue),
@@ -247,13 +248,26 @@ impl ToolkitProgram {
     }
 }
 
-pub fn dialogue_noop_ok() {}
-pub fn dialogue_noop_input(_b: bool, _s: String) {}
+#[allow(dead_code)]
+pub fn dialogue_noop_ok() -> Message {
+    Message::CloseWindow
+}
+#[allow(dead_code)]
+pub fn dialogue_noop_input(_b: bool, _s: String) -> Message {
+    Message::CloseWindow
+}
 
 fn window_message(windows: &mut Vec<ToolkitWindow>, message: Message, recurse: bool) {
     match message {
         Message::CloseWindow => {
             windows.pop();
+        }
+        Message::CloseWindows(n) => {
+            for _ in 0..n {
+                if windows.pop().is_none() {
+                    return;
+                }
+            }
         }
         Message::OpenMenuMain => {
             windows.push(ToolkitWindow::MenuMain(crate::menu_main::MenuMain::new()))
