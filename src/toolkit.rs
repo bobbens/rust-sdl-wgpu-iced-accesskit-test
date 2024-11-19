@@ -1,9 +1,10 @@
-use crate::toolkit_lua::{MessageLua, ToolkitWindowLua};
+use crate::toolkit_lua::ToolkitWindowLua;
 use iced::border::Border;
 use iced::theme::palette::{Background, Danger, Extended, Pair, Primary, Secondary, Success};
 use iced::theme::Palette;
 use iced::widget::container::Style;
 use iced_core::{Color, Element, Theme};
+use iced_lua::Message as MessageLua;
 use iced_runtime::Task;
 use iced_wgpu::{wgpu, Renderer};
 

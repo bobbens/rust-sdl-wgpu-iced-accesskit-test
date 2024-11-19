@@ -1661,6 +1661,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "iced_lua"
+version = "0.0.1"
+dependencies = [
+ "iced",
+ "iced_core",
+ "iced_wgpu",
+ "iced_widget",
+ "mlua",
+]
+
+[[package]]
 name = "iced_renderer"
 version = "0.14.0-dev"
 source = "git+https://github.com/iced-rs/iced#50340b4b433abc7461400ce908ab644ab49aee74"
@@ -1772,7 +1783,7 @@ dependencies = [
 
 [[package]]
 name = "integration"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "console_error_panic_hook",
  "console_log",
@@ -1780,6 +1791,7 @@ dependencies = [
  "env_logger",
  "iced",
  "iced_core",
+ "iced_lua",
  "iced_runtime",
  "iced_wgpu",
  "iced_widget",

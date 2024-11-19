@@ -1,6 +1,6 @@
 [package]
 name = "integration"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
 publish = false
 
@@ -10,12 +10,14 @@ iced_wgpu = { git = "https://github.com/iced-rs/iced" }
 iced_runtime = { git = "https://github.com/iced-rs/iced" }
 iced_core = { git = "https://github.com/iced-rs/iced" }
 iced_widget = { git = "https://github.com/iced-rs/iced" }
+iced_lua = { git = "https://github.com/bobbens/iced-lua", features = ["wgpu"] }
+#iced_lua = { path = "../iced-lua", features = ["wgpu"] }
 wgpu = { version = "23", features = ["glsl"] }
-console_error_panic_hook = "0"
+console_error_panic_hook = "0.1"
 console_log = "1.0"
 sdl2 = { version = "0", features = ["raw-window-handle"] }
-pollster = "0"
-env_logger = "0"
+pollster = "0.4"
+env_logger = "0.11"
 raw-window-handle = "0.6.0"
-mlua = { version = "0", features = ["luajit", "send"] }
-encase = "0"
+mlua = { version = "0.10", features = ["luajit", "send"] }
+encase = "0.10"
