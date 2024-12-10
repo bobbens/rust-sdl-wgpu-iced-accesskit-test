@@ -10,7 +10,6 @@ pub fn open_iced(lua: &mlua::Lua) -> mlua::Result<()> {
     iced.set(
         "_run",
         lua.create_function(|_lua, (update, view): (mlua::Function, mlua::Function)| {
-            dbg!("added!");
             toolkit::MESSAGE_QUEUE
                 .lock()
                 .unwrap()
@@ -19,11 +18,12 @@ pub fn open_iced(lua: &mlua::Lua) -> mlua::Result<()> {
         })?,
     )?;
     globals.set("iced", iced)?;
+    // mlua doesn't support this directly, so we hack around it
     lua.load(
-        "iced.run = function (...)
-        iced._run(...)
-        coroutine.yield()
-    end ",
+"iced.run = function (...)
+    iced._run(...)
+    coroutine.yield()
+end ",
     )
     .exec()?;
     Ok(())
