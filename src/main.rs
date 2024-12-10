@@ -14,6 +14,13 @@ use iced_wgpu::wgpu;
 use sdl2::event::{Event, WindowEvent};
 use sdl2::keyboard::Keycode;
 
+use std::sync::atomic::AtomicBool;
+static QUIT: AtomicBool = AtomicBool::new(false);
+
+pub fn quit() {
+    QUIT.store( true, std::sync::atomic::Ordering::Relaxed)
+}
+
 pub fn main() -> Result<(), String> {
     // Show logs from wgpu
     env_logger::init();
@@ -146,8 +153,10 @@ pub fn main() -> Result<(), String> {
                 toolkit.queue_event(evt);
             }
         }
-
         toolkit.update(&mut clipboard, &mut nlua_cur_th);
+        if QUIT.load( std::sync::atomic::Ordering::Relaxed) {
+            break 'running;
+        }
 
         let frame = match surface.get_current_texture() {
             Ok(frame) => frame,
@@ -188,6 +197,10 @@ pub fn main() -> Result<(), String> {
         frame.present();
 
         scene.update(0.01);
+
+        if QUIT.load( std::sync::atomic::Ordering::Relaxed) {
+            break 'running;
+        }
     }
 
     Ok(())

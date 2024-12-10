@@ -43,7 +43,10 @@ impl toolkit::Window for MenuMain {
                     String::from("What will you name your new pilot?"),
                     &pilot_new,
                 ),
-                Message::ExitGame => MessageBase::CloseWindow,
+                Message::ExitGame => {
+                    crate::quit();
+                    MessageBase::CloseWindow
+                },
                 Message::Options => MessageBase::OpenDialogueOK(
                     String::from("Not implemented yet!"),
                     &toolkit::dialogue_noop_ok,

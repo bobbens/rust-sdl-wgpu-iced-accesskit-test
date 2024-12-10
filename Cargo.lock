@@ -1663,6 +1663,7 @@ dependencies = [
 [[package]]
 name = "iced_lua"
 version = "0.0.1"
+source = "git+https://github.com/bobbens/iced-lua#d9354b57c4f3c97f3ae85949103082828a847de4"
 dependencies = [
  "iced",
  "iced_core",
